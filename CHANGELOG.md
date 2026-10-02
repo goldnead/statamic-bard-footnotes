@@ -2,13 +2,16 @@
 
 All notable changes to `statamic-bard-footnotes` will be documented in this file.
 
-## 1.0.0 - unreleased
+## 1.0.0 - 2026-10-02
 
 ### First release
 
 - `Footnotes::render()`: `[n]` markers (1–2 digits) in rendered Bard HTML become superscript
   links `<sup class="footnote-ref"><a href="#fn-n" id="fnref-n">`; only 1 to the source count,
-  never inside links or headings, jump target only on the first occurrence.
+  never inside links, headings (h1–h6), `pre` or `code`, jump target only on the first occurrence.
+- Bard fields with sets: every text set is rendered, other sets pass through untouched, and the
+  jump target is placed once across all text sets (`Footnotes::renderSets()`,
+  `Footnotes::renderValue()`).
 - `Footnotes::sources()`: normalizes the `sources` grid to numbered source rows. Empty rows
   drop out and the numbering closes the gaps; urls survive only with `http(s)://`.
 - `{{ | footnotes }}` modifier: count from the sources field (passed, named, or from the
