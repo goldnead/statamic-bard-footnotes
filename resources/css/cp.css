@@ -1,0 +1,14 @@
+@import "@statamic/cms/tailwind.css";
+@source "../js";
+
+/*
+ * The inline footnote in the editor: the same superscript the front end
+ * renders, clickable to edit. The utilities used by the components above
+ * are generated from ../js through the @source line — core's own build
+ * does not know about this addon's class names.
+ */
+.bard-content sup.footnote-ref {
+    font-size: 0.75em;
+    line-height: 0;
+    cursor: pointer;
+}

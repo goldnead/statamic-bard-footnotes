@@ -8,7 +8,7 @@
             {{ else }}
                 {{ text | entities }}
             {{ /if }}
-            {{ if cited }} <a href="#fnref-{{ number }}" class="footnote-back" aria-label="{{ trans key="bard-footnotes::messages.back" :number="number" }}">↩</a>{{ /if }}
+            <a href="#fnref-{{ number }}" class="footnote-back" aria-label="{{ trans key="bard-footnotes::messages.back" :number="number" }}">↩</a>
         </li>
     {{ /sources }}
     </ol>

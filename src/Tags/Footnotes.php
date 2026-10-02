@@ -1,7 +1,7 @@
 <?php
 
 /**
- * The `footnotes` tag.
+ * The `footnotes` tag: the source list for a Bard field's inline footnotes.
  */
 
 namespace Goldnead\BardFootnotes\Tags;
@@ -14,22 +14,22 @@ class Footnotes extends Tags
     protected static $handle = 'footnotes';
 
     /**
-     * As a pair, loops over the sources; on its own, renders the
-     * `bard-footnotes::list` view.
+     * Collects the field's (`field="..."`) footnote nodes in document
+     * order — the same order the augment hook numbers them by — and
+     * either loops them (pair) or renders the `bard-footnotes::list`
+     * view (single tag).
      *
      * @return string|array
      */
     public function index()
     {
-        $sources = Footnote::sources($this->params->get('sources') ?? $this->context->get('sources'));
+        $sources = Footnote::sources($this->rawContent());
 
         if ($sources === []) {
             // An empty array rather than null: Antlers turns it into
             // no_results for the pair, and the single tag renders nothing.
             return $this->isPair ? [] : '';
         }
-
-        $sources = $this->withCited($sources);
 
         if (! $this->isPair) {
             // The addon's view namespace is registered at boot and invisible
@@ -41,23 +41,15 @@ class Footnotes extends Tags
     }
 
     /**
-     * Whether each source is actually cited. Only decidable when the content
-     * comes along — as HTML or as Bard sets, every text set counts; without
-     * it every source stays `cited => false`.
+     * The field's raw Bard document. A `:content` binding can't carry it:
+     * by the time the tag runs, binding a Bard value yields its augmented
+     * output (HTML, or the augmented rows for a sets field) — so the raw
+     * JSON is read from the template context, by field handle.
      */
-    private function withCited(array $sources): array
+    private function rawContent(): mixed
     {
-        $content = $this->params->get('content');
+        $field = $this->params->get('field');
 
-        if ($content === null) {
-            return array_map(fn (array $source): array => [...$source, 'cited' => false], $sources);
-        }
-
-        $rendered = Footnote::html($content, count($sources));
-
-        return array_map(
-            fn (array $source): array => [...$source, 'cited' => Footnote::cited($rendered, $source['number'])],
-            $sources
-        );
+        return $field === null ? null : $this->context->get($field);
     }
 }
