@@ -3,12 +3,21 @@
 
 /*
  * The inline footnote in the editor: the same superscript the front end
- * renders, clickable to edit. The utilities used by the components above
- * are generated from ../js through the @source line — core's own build
- * does not know about this addon's class names.
+ * renders, clickable to edit. Colored like Bard's links so it reads as
+ * clickable (hover underlines it, selection highlights it like core's
+ * selected sets — blue-400). The link colors are stock blue, not
+ * text-primary, because that is exactly what core's bard.css gives the
+ * editor's content links — content does not follow the CP theme. The
+ * utilities used by the components above are generated from ../js through
+ * the @source line — core's own build does not know about this addon's
+ * class names.
  */
 .bard-content sup.footnote-ref {
+    @apply cursor-pointer rounded-xs text-blue-600 underline decoration-transparent underline-offset-2 transition-colors hover:decoration-current dark:text-blue-400;
     font-size: 0.75em;
     line-height: 0;
-    cursor: pointer;
+}
+
+.bard-content sup.footnote-ref.is-selected {
+    @apply bg-blue-400/25 decoration-current;
 }

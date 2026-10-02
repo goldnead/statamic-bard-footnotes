@@ -25,6 +25,19 @@ All notable changes to `statamic-bard-footnotes` will be documented in this file
   listed source is cited by definition. The pair loop now yields `number`, `text`, `url`.
 - `Footnotes::sources()` returns `list<{number, text, url}>` for a raw Bard value.
 
+### Refined: editing reused sources, CP polish
+
+- Opening a footnote selects the source it cites in the popover ("New source" only for
+  unmatched ones); the select is labeled, the inputs use placeholders, and the link field
+  is marked optional.
+- Editing a reused source updates every footnote citing it — one transaction, with a hint
+  ("Used N times. Changes apply to every place.") when it applies. Removing a footnote
+  still only removes that one spot.
+- The popover focuses the source text field on open, like Bard's link toolbar.
+- The superscript in the editor is link-colored, underlines on hover, highlights when
+  selected, and carries the source as tooltip; the toolbar icon is its own shape
+  (text line, superscript 1, footnote rule).
+
 ## 1.0.0 - 2026-10-02
 
 ### First release

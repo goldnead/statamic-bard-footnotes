@@ -65,16 +65,31 @@ export function footnoteNumberAt(doc, pos) {
 
 /**
  * The distinct sources of a document, in number order — the options for
- * the "reuse a source" select.
+ * the "reuse a source" select — each with how often it is cited.
  */
 export function distinctSources(doc) {
     const seen = new Map();
 
     for (const footnote of collectFootnotes(doc)) {
-        if (!seen.has(footnote.key)) {
-            seen.set(footnote.key, footnote);
+        const source = seen.get(footnote.key);
+
+        if (source) {
+            source.count++;
+        } else {
+            seen.set(footnote.key, { ...footnote, count: 1 });
         }
     }
 
     return [...seen.values()];
+}
+
+/**
+ * The positions of every footnote node citing a source. Editing a reused
+ * source changes all of them — one transaction, the old key picks the
+ * targets (see the `updateFootnoteSource` command in cp.js).
+ */
+export function positionsCiting(doc, key) {
+    return collectFootnotes(doc)
+        .filter((footnote) => footnote.key === key)
+        .map((footnote) => footnote.pos);
 }

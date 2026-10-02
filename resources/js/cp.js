@@ -9,6 +9,7 @@
 
 import FootnoteNodeView from './components/FootnoteNodeView.vue';
 import FootnoteToolbarButton from './components/FootnoteToolbarButton.vue';
+import { positionsCiting } from './footnotes.js';
 
 Statamic.booting(() => {
     Statamic.$components.register('FootnoteToolbarButton', FootnoteToolbarButton);
@@ -64,6 +65,31 @@ Statamic.booting(() => {
                 return {
                     insertFootnote: (attrs) => ({ chain }) =>
                         chain().focus().insertContent({ type: this.name, attrs }).run(),
+
+                    // Editing a source edits every place citing it: one
+                    // transaction over every node with the old key (attrs
+                    // never change a node's size, so the positions stay
+                    // valid while the loop runs).
+                    updateFootnoteSource: (key, attrs) => ({ state, dispatch }) => {
+                        const positions = positionsCiting(state.doc, key);
+
+                        if (positions.length === 0) {
+                            return false;
+                        }
+
+                        if (dispatch) {
+                            const tr = state.tr;
+
+                            for (const pos of positions) {
+                                const node = tr.doc.nodeAt(pos);
+                                tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...attrs });
+                            }
+
+                            dispatch(tr);
+                        }
+
+                        return true;
+                    },
                 };
             },
         });

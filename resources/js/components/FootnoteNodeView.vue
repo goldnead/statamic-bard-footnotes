@@ -1,6 +1,6 @@
 <script>
 import FootnotePopover from './FootnotePopover.vue';
-import { collectFootnotes, distinctSources } from '../footnotes.js';
+import { collectFootnotes, distinctSources, sourceKey } from '../footnotes.js';
 
 /**
  * A footnote in the text: a superscript with its live number — computed
@@ -61,7 +61,10 @@ export default {
             this.number = mine ? mine.number : null;
         },
         apply(attrs) {
-            this.updateAttributes?.(attrs);
+            // A reused source is one source: the change lands on every
+            // node citing the old key, in one transaction. Remove stays
+            // local (deleteNode, below).
+            this.editor.commands.updateFootnoteSource(sourceKey(this.node.attrs), attrs);
         },
     },
 };
@@ -74,6 +77,7 @@ export default {
     >
         <sup
             class="footnote-ref"
+            :class="{ 'is-selected': selected }"
             v-tooltip="title"
             @click.stop="showing = true"
         >{{ number }}</sup>

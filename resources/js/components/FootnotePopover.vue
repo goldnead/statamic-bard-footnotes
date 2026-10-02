@@ -1,5 +1,6 @@
 <script>
-import { Button, Description, Input, Select, Stack, StackContent, StackFooter } from '@statamic/cms/ui';
+import { Button, Description, Field, Input, Select, Stack, StackContent, StackFooter } from '@statamic/cms/ui';
+import { sourceKey } from '../footnotes.js';
 
 /**
  * The footnote form, in the same slide-out Stack Bard's own link button
@@ -7,12 +8,12 @@ import { Button, Description, Input, Select, Stack, StackContent, StackFooter } 
  * `apply({ text, url })` and `remove`, and closes itself.
  */
 export default {
-    components: { Button, Description, Input, Select, Stack, StackContent, StackFooter },
+    components: { Button, Description, Field, Input, Select, Stack, StackContent, StackFooter },
 
     props: {
         open: { type: Boolean, default: false },
         text: { type: String, default: '' },
-        url: { type: String, default: '' },
+        url: { type: String, default: null },
         existingSources: { type: Array, default: () => [] },
         showRemove: { type: Boolean, default: false },
     },
@@ -20,7 +21,7 @@ export default {
     emits: ['update:open', 'apply', 'remove'],
 
     data() {
-        return { source: 'new', sourceText: this.text, sourceUrl: this.url };
+        return { source: 'new', sourceText: this.text, sourceUrl: this.url ?? '' };
     },
 
     computed: {
@@ -28,10 +29,15 @@ export default {
             return [
                 { value: 'new', label: __('bard-footnotes::messages.new_source') },
                 ...this.existingSources.map((source) => ({
-                    value: source.key,
+                    value: this.optionValue(source.key),
                     label: `${source.number}. ${source.text || source.url}`,
                 })),
             ];
+        },
+        // The select's value is prefixed so no source key — any text is a
+        // possible one — can collide with the "new" sentinel.
+        selectedSource() {
+            return this.existingSources.find((source) => this.optionValue(source.key) === this.source) ?? null;
         },
         validUrl() {
             const url = this.sourceUrl.trim();
@@ -44,19 +50,25 @@ export default {
     },
 
     watch: {
-        // Fresh values every time it opens; picking an existing source
-        // fills the fields, which stay editable.
+        // Fresh values every time it opens, the select on the source the
+        // footnote already cites — "New source" only without a match.
+        // Picking an existing source fills the fields, which stay editable.
         open(isOpen) {
             if (!isOpen) {
                 return;
             }
 
             this.sourceText = this.text;
-            this.sourceUrl = this.url;
-            this.source = 'new';
+            this.sourceUrl = this.url ?? '';
+
+            const key = sourceKey({ text: this.text, url: this.url });
+            const cited = this.existingSources.find((source) => source.key === key);
+
+            this.source = cited ? this.optionValue(cited.key) : 'new';
+            this.focusSourceText();
         },
-        source(key) {
-            const existing = this.existingSources.find((source) => source.key === key);
+        source(value) {
+            const existing = this.existingSources.find((source) => this.optionValue(source.key) === value);
 
             if (existing) {
                 this.sourceText = existing.text;
@@ -66,6 +78,16 @@ export default {
     },
 
     methods: {
+        optionValue(key) {
+            return `source:${key}`;
+        },
+        // Core's LinkToolbar pattern: the Stack portal needs a tick plus
+        // a beat before the input can take the focus.
+        focusSourceText() {
+            this.$nextTick(() => {
+                setTimeout(() => this.$refs.sourceText?.focus(), 50);
+            });
+        },
         apply() {
             if (!this.canApply) {
                 return;
@@ -101,24 +123,34 @@ export default {
         </template>
 
         <StackContent class="space-y-5">
-            <Select
+            <Field
                 v-if="existingSources.length"
-                v-model="source"
-                :options="options"
-            />
+                :label="__('bard-footnotes::messages.source')"
+            >
+                <Select
+                    v-model="source"
+                    :options="options"
+                />
+                <!-- Editing a reused source changes every place citing it;
+                     "Remove Footnote" below only removes this one. -->
+                <Description
+                    v-if="selectedSource?.count > 1"
+                    class="mt-2"
+                    :text="__('bard-footnotes::messages.reused_source', { count: selectedSource.count })"
+                />
+            </Field>
             <Input
+                ref="sourceText"
                 v-model="sourceText"
                 type="text"
                 autofocus
-                :placeholder="__('bard-footnotes::messages.source')"
-                :prepend="__('bard-footnotes::messages.source')"
+                :placeholder="__('bard-footnotes::messages.source_placeholder')"
                 @keydown.enter.prevent="apply"
             />
             <Input
                 v-model="sourceUrl"
                 type="text"
-                placeholder="https://"
-                :prepend="__('bard-footnotes::messages.link')"
+                :placeholder="__('bard-footnotes::messages.link_placeholder')"
                 @keydown.enter.prevent="apply"
             />
             <Description
