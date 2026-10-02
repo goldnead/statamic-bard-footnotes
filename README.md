@@ -60,7 +60,7 @@ and the jump target `id="fnref-n"` is placed only once across all text sets:
 ```antlers
 {{ content | footnotes }}
     {{ if type == 'text' }}{{ text }}{{ /if }}
-    {{ if type == 'quote' }}<blockquote>{{ quote }}</blockquote>{{ /if }}
+    {{ if type == 'quote' }}<blockquote>{{ quote | entities }}</blockquote>{{ /if }}
 {{ /content }}
 ```
 
