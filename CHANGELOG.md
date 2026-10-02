@@ -2,6 +2,29 @@
 
 All notable changes to `statamic-bard-footnotes` will be documented in this file.
 
+## 2.0.0 - unreleased
+
+### Breaking: footnotes move into the text
+
+- Requires Statamic 6 and PHP 8.2. For Statamic 5, stay on the `1.x` branch — see
+  [UPGRADE.md](UPGRADE.md) for the manual migration.
+- Removed the `sources` grid fieldset and typed `[n]` markers: no more `Footnotes::render()`,
+  `renderSets()`, `renderValue()`, the `{{ | footnotes }}` modifier, or the fieldset import.
+  Footnotes are now created with a **Footnote** toolbar button in Bard — an inline node storing
+  its source (`text`, optional `url`), rendered as a superscript link.
+- Numbers are derived, never stored: order of first occurrence, same source = same number
+  (same trimmed URL, else same text — whitespace collapsed, case-insensitive). The editor shows
+  the live number; clicking a footnote reopens its popover.
+- Numbering runs across the whole field, Bard sets included; a Bard field nested inside a set
+  remains its own document.
+- Markup: `<sup class="footnote-ref"><a href="#fn-n" id="fnref-n" aria-label="Footnote n">n</a></sup>`,
+  jump target on first occurrence only. The CP bundle (button, popover, node view) is committed
+  under `dist/` and published with `vendor:publish --tag=statamic-bard-footnotes`.
+- The `{{ footnotes }}` tag reads the field from the template context by handle
+  (`field="content"` — a `:content` binding arrives as rendered HTML). `cited` is gone: every
+  listed source is cited by definition. The pair loop now yields `number`, `text`, `url`.
+- `Footnotes::sources()` returns `list<{number, text, url}>` for a raw Bard value.
+
 ## 1.0.0 - 2026-10-02
 
 ### First release

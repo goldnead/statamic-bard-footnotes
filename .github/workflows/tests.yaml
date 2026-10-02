@@ -14,47 +14,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Every laravel/framework release below 12 carries unpatched security
-          # advisories, which Composer refuses to install. Statamic 5 supports
-          # Laravel 12 since 5.66, so the Statamic 5 leg runs there. That is why
-          # there is no Laravel axis in this matrix: there is only one installable
-          # Laravel major for the range this package declares.
-          - php: "8.2"
-            statamic: "5.*"
-            laravel: "12.*"
-            testbench: "10.*"
-            stability: prefer-stable
-          - php: "8.3"
-            statamic: "5.*"
-            laravel: "12.*"
-            testbench: "10.*"
-            stability: prefer-stable
-          - php: "8.2"
-            statamic: "6.*"
-            laravel: "12.*"
-            testbench: "10.*"
-            stability: prefer-stable
-          - php: "8.3"
-            statamic: "6.*"
-            laravel: "12.*"
-            testbench: "10.*"
-            stability: prefer-stable
-          - php: "8.4"
-            statamic: "6.*"
-            laravel: "12.*"
-            testbench: "10.*"
-            stability: prefer-stable
-          # The floor of the declared range. Without this leg the constraints in
-          # composer.json are a claim nobody verifies. Resolves to the oldest
-          # Statamic 5 release that still installs on Laravel 12.
-          - php: "8.2"
-            statamic: "5.*"
-            laravel: "12.*"
-            testbench: "10.*"
-            stability: prefer-lowest
+        php: ["8.2", "8.3", "8.4"]
+        stability: [prefer-stable, prefer-lowest]
 
-    name: PHP ${{ matrix.php }} · Statamic ${{ matrix.statamic }} · ${{ matrix.stability }}
+        # No Statamic axis and no Laravel axis: Statamic 6 requires Laravel
+        # 12, so there is exactly one installable Laravel major for the
+        # range this package declares. The prefer-lowest legs verify the
+        # floor of `^6.0` instead.
+
+    name: PHP ${{ matrix.php }} · Statamic 6 · ${{ matrix.stability }}
 
     steps:
       - name: Checkout code
@@ -72,7 +40,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          composer require "laravel/framework:${{ matrix.laravel }}" "statamic/cms:${{ matrix.statamic }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer require "laravel/framework:12.*" "statamic/cms:6.*" "orchestra/testbench:10.*" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
 
       - name: Run PHPUnit
@@ -115,3 +83,32 @@ jobs:
       - run: composer install --prefer-dist --no-interaction
 
       - run: vendor/bin/phpstan analyse --no-progress
+
+  assets:
+    runs-on: ubuntu-latest
+    name: Committed dist is current
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - run: composer install --prefer-dist --no-interaction
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # The compiled bundle in dist/ is committed; consumers never run a
+      # Node build. This job fails when the sources changed without a
+      # rebuild, so what ships always matches what is in the repo.
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm test
+      - run: git diff --exit-code -- dist

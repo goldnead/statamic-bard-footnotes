@@ -1,90 +1,91 @@
 # Bard Footnotes
 
-Footnotes for Statamic's Bard field: type `[1]` in the text, keep the sources in a grid, get
-superscript links and a source list.
+Footnotes for Statamic's Bard field: a toolbar button, inline superscript references, and an
+automatic source list. No second field, no typed `[1]` markers — the footnote lives in the text
+itself, as a node.
 
-Bard has no superscript with an anchor — but plain text survives every save, in the CP and in
-inline editing alike. So the marker of choice is a typed `[1]`, and everything else happens on
-output:
+- A **Footnote** button in Bard's toolbar opens a popover: a source (required) and a link
+  (optional, `http`/`https` only) — or a pick of the sources already cited in the same field.
+- The footnote renders inline as `<sup class="footnote-ref"><a href="#fn-1" id="fnref-1"
+  aria-label="Footnote 1">1</a></sup>`, numbered by order of first occurrence.
+- Citing the same source again reuses its number; the jump target `id="fnref-n"` is written once.
+- The source list below the article carries the targets `id="fn-1"`, `id="fn-2"` … and a `↩` back
+  link per source.
+- Clicking a footnote in the CP opens the popover again — edit it or remove it.
 
-- A `[1]` in the text becomes `<sup class="footnote-ref"><a href="#fn-1" id="fnref-1" aria-label="Footnote 1">1</a></sup>`
-- The source list below the article carries the jump targets `id="fn-1"`, `id="fn-2"` … and,
-  for cited sources, a back link `#fnref-n`.
-- Markers without a matching source (`[0]`, `[4]` when there are three sources) stay as text.
-  So does everything inside links, headings, `pre` and `code` — `arr[1]` in a code block stays code.
+Requires Statamic 6. On Statamic 5, use the [1.x branch](https://github.com/goldnead/statamic-bard-footnotes/tree/1.x)
+(see [UPGRADE.md](UPGRADE.md)).
 
 ## Installation
 
 ```bash
 composer require goldnead/statamic-bard-footnotes
+php artisan vendor:publish --tag=statamic-bard-footnotes
 ```
 
-## The field
+The publish step copies the compiled control panel bundle into `public/vendor/statamic-bard-footnotes`.
+No Node toolchain is needed — `dist/` ships with the package.
 
-Add the shipped fieldset to your blueprint:
+## The button
+
+The button appears in a Bard field when its blueprint config lists it, like every core button:
 
 ```yaml
 fields:
   -
-    import: bard-footnotes::sources
+    handle: content
+    field:
+      type: bard
+      buttons:
+        - h2
+        - bold
+        - footnote
 ```
 
-You get a grid named `sources` with the columns **Source** (text) and **Link** (url). One source
-per row; reference it in the text with `[1]`, `[2]` … in the order of this list. Rows without
-text drop out on output, and the numbering follows the remaining rows.
+Footnotes stay readable (and editable) in fields whose config does not list the button — only the
+toolbar button is opt-in, the node itself always renders.
 
-A link only reaches the output when it starts with `http://` or `https://` — anything else a
-redactor types into that column (`javascript:…`, a relative path) becomes a plain-text source.
-That is deliberate: nothing from a content field should end up in an `href` unvetted.
+## In the CP
+
+Select some text (or just place the cursor) and click **Footnote**. Fill in the source and,
+optionally, a link; Apply inserts the footnote at the cursor. The popover's select at the top
+offers the sources already cited in this field — picking one fills the fields with its text and
+link. The editor shows the live superscript number; hovering it reveals the source.
+
+Numbers are never stored. They are derived from the document: order of first occurrence, with the
+same source keeping the same number. "Same source" means the same link (trimmed), or — without a
+link — the same text (whitespace collapsed, case-insensitive).
 
 ## In Antlers
 
-Prepare the article with the modifier, then render the list with the tag:
+Render the article, then the source list:
 
 ```antlers
-{{ article | footnotes(sources) }}
+{{ content }}
 
-{{ footnotes :sources="sources" :content="article" }}
+{{ footnotes field="content" }}
 ```
 
-The modifier accepts the count three ways:
+The single tag renders the shipped `bard-footnotes::list` view: a "Sources" heading, an ordered
+list, external links with `target="_blank" rel="noopener noreferrer"`, and a `↩` back link per
+source. Text and url are always escaped. No footnotes, no output.
 
-- `{{ article | footnotes(sources) }}` — the grid field (or `{{ article | footnotes:sources }}`)
-- `{{ article | footnotes:3 }}` — a plain number
-- `{{ article | footnotes }}` — reads the field `sources` from the context
+**Bard with sets** numbers across the whole field — a footnote before a set and one after it are
+numbered in reading order. (A Bard field *nested inside* a set is its own document and numbers
+separately, the same way Statamic augments it.)
 
-**Bard with sets** works as a pair loop: the modifier takes the whole set list and
-returns it with every text set's `text` rendered — other sets pass through untouched,
-and the jump target `id="fnref-n"` is placed only once across all text sets:
-
-```antlers
-{{ content | footnotes }}
-    {{ if type == 'text' }}{{ text }}{{ /if }}
-    {{ if type == 'quote' }}<blockquote>{{ quote | entities }}</blockquote>{{ /if }}
-{{ /content }}
-```
-
-(Antlers accepts a modifier's result as the data of a pair loop, the same mechanism
-`{{ list | reverse }}` uses.) The `sources` count comes from the surrounding context.
-
-The tag works two ways:
-
-**Single tag** — renders the shipped `bard-footnotes::list` view, with the "Sources" heading,
-an ordered list, external links with `target="_blank" rel="noopener noreferrer"` and a `↩` back
-link for every cited source. Text and url are always escaped. No sources, no output.
-
-**Tag pair** — loop over the sources yourself. The single tag escapes text and url itself;
-in the pair that is your template's job, hence `| entities`:
+**Tag pair** — loop the sources yourself:
 
 ```antlers
-{{ footnotes :sources="sources" :content="article" }}
-    <li id="fn-{{ number }}">{{ text | entities }}{{ if url }} — {{ url | entities }}{{ /if }}{{ if cited }} <a href="#fnref-{{ number }}">↩</a>{{ /if }}</li>
+{{ footnotes field="content" }}
+    <li id="fn-{{ number }}">{{ text | entities }}{{ if url }} — <a href="{{ url | entities }}">{{ url | entities }}</a>{{ /if }} <a href="#fnref-{{ number }}">↩</a></li>
 {{ /footnotes }}
 ```
 
-Each source carries `number`, `text`, `url`, `cited`. `cited` is true when the rendered content
-actually contains the marker `[n]`; without `:content` it is always false. `no_results` and
-`total_results` behave like in Statamic's collection tags.
+The tag reads the field's raw value from the template context, by handle — a `:content="content"`
+binding would arrive as already-rendered HTML, too late to read the footnotes from. Each source
+carries `number`, `text`, `url` (`null` unless `http(s)`). `no_results` and `total_results` behave
+like in Statamic's collection tags.
 
 Publish the view to make it your own:
 
@@ -94,32 +95,27 @@ php artisan vendor:publish --tag=bard-footnotes-views
 
 ## In PHP
 
-For Blade, Inertia or anywhere outside Antlers, the static methods do all of it:
+For Blade, Inertia or anywhere outside Antlers:
 
 ```php
 use Goldnead\BardFootnotes\Footnotes;
 
-$sources = Footnotes::sources($entry->sources); // list of ['number', 'text', 'url']
+// list of ['number' => 1, 'text' => 'Smith, p. 12', 'url' => 'https://…']
+$sources = Footnotes::sources($entry->content);
 
-// Whatever the article field is: a plain Bard field comes back as rendered HTML,
-// a field with sets comes back as the same set list with every text set rendered.
-$content = Footnotes::renderValue($entry->article, count($sources));
-
-// For Inertia:
-return Inertia::render('Article', ['content' => $content, 'sources' => $sources]);
-
-// For Blade, a plain Bard field:
-{!! $content !!}
+return Inertia::render('Article', [
+    'content' => $entry->content, // rendered HTML: the augment pass numbers and links
+    'sources' => $sources,
+]);
 ```
 
-`renderValue()` takes whatever the field hands you — the HTML string of a plain Bard field,
-or its set list — and returns the same shape with the markers linked (`render()` for a bare
-HTML string, `renderSets()` for a set list). `sources()` accepts the raw grid value, a
-Statamic `Value` or a collection.
+`sources()` accepts the raw field value, a Statamic `Value` or a collection. The rendered HTML
+needs nothing from you — the augment hook numbers every footnote of the field and the node turns
+each into the superscript link.
 
 ## CSS
 
-No assets are published; two small rules cover the essentials:
+No frontend assets are published; two small rules cover the essentials:
 
 ```css
 sup.footnote-ref {
@@ -138,9 +134,14 @@ sup.footnote-ref {
 
 ## Limits
 
-The ids `fn-n` and `fnref-n` are fixed: one footnote list per page. Two `footnotes` tags on the
-same page produce the same ids. Translations ship for English and German
-(`lang/en`, `lang/de`); the strings live under `bard-footnotes::messages`.
+- The ids `fn-n` and `fnref-n` are fixed: one footnote list per page. Two `footnotes` tags on the
+  same page produce the same ids.
+- **Removing the addon empties the field.** A Bard document containing footnote nodes needs this
+  addon's node registered — for rendering *and* in the CP. With the addon uninstalled or disabled,
+  a Bard field holding footnotes loads **empty** in the CP, and the next save destroys the value.
+  Migrate the content away first (remove or convert the footnotes), then remove the addon.
+- Translations ship for English and German (`lang/en`, `lang/de`); the strings live under
+  `bard-footnotes::messages`.
 
 ## License
 

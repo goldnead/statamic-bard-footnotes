@@ -3,7 +3,7 @@ vendor
 .phpunit.result.cache
 .phpunit.cache
 node_modules
-package-lock.json
+dist/hot
 .php_cs.cache
 .php-cs-fixer.cache
 .idea
