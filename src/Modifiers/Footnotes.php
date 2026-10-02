@@ -13,13 +13,13 @@ use Statamic\Modifiers\Modifier;
 class Footnotes extends Modifier
 {
     /**
-     * @param  mixed  $value  The value to be modified: an HTML string or a Bard value
+     * @param  mixed  $value  The value to be modified: an HTML string, or a Bard value — plain or with sets
      * @param  array  $params  Any parameters used in the modifier
      * @param  array  $context  Contextual values
      */
     public function index($value, $params = [], $context = [])
     {
-        return Footnote::render((string) $value, $this->count($params, $context));
+        return Footnote::renderValue($value, $this->count($params, $context));
     }
 
     /**

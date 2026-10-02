@@ -22,20 +22,22 @@ final class Footnotes
     /**
      * `[n]` in the running text becomes a superscript link pointing at
      * `#fn-n` in the source list. Only for 1 to $count (that many sources
-     * exist), never inside links or headings.
+     * exist), never inside links, headings or code.
+     *
+     * $placed carries which jump targets already exist, so several calls
+     * over one document (renderSets) still place each `fnref-n` only once.
      *
      * Anything without work to do returns the HTML unchanged, without a DOM
      * round-trip.
      */
-    public static function render(string $html, int $count): string
+    public static function render(string $html, int $count, array &$placed = []): string
     {
         if ($count < 1 || ! str_contains($html, '[')) {
             return $html;
         }
 
         [$doc, $root] = self::load($html);
-        $nodes = (new DOMXPath($doc))->query('.//text()[not(ancestor::a) and not(ancestor::h1) and not(ancestor::h2) and not(ancestor::h3) and not(ancestor::h4)]', $root);
-        $placed = [];
+        $nodes = (new DOMXPath($doc))->query('.//text()[not(ancestor::a) and not(ancestor::h1) and not(ancestor::h2) and not(ancestor::h3) and not(ancestor::h4) and not(ancestor::h5) and not(ancestor::h6) and not(ancestor::pre) and not(ancestor::code)]', $root);
         $changed = false;
 
         foreach (iterator_to_array($nodes ?: []) as $text) {
@@ -77,6 +79,66 @@ final class Footnotes
         }
 
         return $changed ? self::save($doc, $root) : $html;
+    }
+
+    /**
+     * A Bard field with sets: the same set list back, every text set with
+     * its `text` rendered, every other set untouched. The jump targets are
+     * shared across the whole list, so `fnref-n` exists exactly once.
+     *
+     * @param  list<mixed>  $sets
+     * @return list<mixed>
+     */
+    public static function renderSets(array $sets, int $count): array
+    {
+        $placed = [];
+
+        return array_map(function (mixed $set) use ($count, &$placed): mixed {
+            if (! self::isTextSet($set)) {
+                return $set;
+            }
+
+            return self::withText($set, self::render(self::text($set['text'] ?? null), $count, $placed));
+        }, $sets);
+    }
+
+    /**
+     * Whatever a Bard field hands over, with every marker rendered: an HTML
+     * string stays a string, a set list (array, Collection, Value) comes
+     * back as sets. Nothing is ever cast from array to string — unknown
+     * values become an empty string.
+     */
+    public static function renderValue(mixed $value, int $count): mixed
+    {
+        $value = self::resolve($value);
+
+        if (is_array($value)) {
+            return self::renderSets($value, $count);
+        }
+
+        return self::render(self::text($value), $count);
+    }
+
+    /**
+     * The rendered HTML of a content value, whatever shape it has: the
+     * string itself, or all text sets joined — what cited() reads.
+     */
+    public static function html(mixed $value, int $count): string
+    {
+        $value = self::resolve($value);
+
+        if (is_array($value)) {
+            $html = '';
+            foreach (self::renderSets($value, $count) as $set) {
+                if (self::isTextSet($set)) {
+                    $html .= self::text($set['text'] ?? null);
+                }
+            }
+
+            return $html;
+        }
+
+        return self::render(self::text($value), $count);
     }
 
     /**
@@ -149,6 +211,55 @@ final class Footnotes
         }
 
         return is_scalar($value) ? trim((string) $value) : '';
+    }
+
+    /**
+     * The one normalization both the modifier and the tag go through: a
+     * Value to its augmented value (the set list of a Bard field with sets,
+     * the HTML of one without), a Collection to its items.
+     */
+    private static function resolve(mixed $value): mixed
+    {
+        if ($value instanceof Value) {
+            $value = $value->value();
+        }
+
+        return $value instanceof Collection ? $value->all() : $value;
+    }
+
+    /**
+     * Content as HTML: an augmented Value (a text set's `text`) to its
+     * string, scalars to their string, everything else to '' — never a
+     * warning.
+     */
+    private static function text(mixed $value): string
+    {
+        if ($value instanceof Value) {
+            $value = $value->value();
+        }
+
+        return is_scalar($value) ? (string) $value : '';
+    }
+
+    private static function isTextSet(mixed $set): bool
+    {
+        if ($set instanceof Values) {
+            return $set->raw('type') === 'text';
+        }
+
+        return is_array($set) && ($set['type'] ?? null) === 'text';
+    }
+
+    /**
+     * The same set shape with a rendered `text`: Values stay Values (they
+     * cannot be mutated), plain arrays stay arrays.
+     */
+    private static function withText(mixed $set, string $html): mixed
+    {
+        $fields = $set instanceof Values ? $set->all() : $set;
+        $fields = [...$fields, 'text' => $html];
+
+        return $set instanceof Values ? new Values($fields) : $fields;
     }
 
     /**

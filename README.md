@@ -11,7 +11,7 @@ output:
 - The source list below the article carries the jump targets `id="fn-1"`, `id="fn-2"` … and,
   for cited sources, a back link `#fnref-n`.
 - Markers without a matching source (`[0]`, `[4]` when there are three sources) stay as text.
-  So does everything inside links and headings.
+  So does everything inside links, headings, `pre` and `code` — `arr[1]` in a code block stays code.
 
 ## Installation
 
@@ -53,17 +53,32 @@ The modifier accepts the count three ways:
 - `{{ article | footnotes:3 }}` — a plain number
 - `{{ article | footnotes }}` — reads the field `sources` from the context
 
+**Bard with sets** works as a pair loop: the modifier takes the whole set list and
+returns it with every text set's `text` rendered — other sets pass through untouched,
+and the jump target `id="fnref-n"` is placed only once across all text sets:
+
+```antlers
+{{ content | footnotes }}
+    {{ if type == 'text' }}{{ text }}{{ /if }}
+    {{ if type == 'quote' }}<blockquote>{{ quote }}</blockquote>{{ /if }}
+{{ /content }}
+```
+
+(Antlers accepts a modifier's result as the data of a pair loop, the same mechanism
+`{{ list | reverse }}` uses.) The `sources` count comes from the surrounding context.
+
 The tag works two ways:
 
 **Single tag** — renders the shipped `bard-footnotes::list` view, with the "Sources" heading,
 an ordered list, external links with `target="_blank" rel="noopener noreferrer"` and a `↩` back
 link for every cited source. Text and url are always escaped. No sources, no output.
 
-**Tag pair** — loop over the sources yourself:
+**Tag pair** — loop over the sources yourself. The single tag escapes text and url itself;
+in the pair that is your template's job, hence `| entities`:
 
 ```antlers
 {{ footnotes :sources="sources" :content="article" }}
-    <li id="fn-{{ number }}">{{ text }}{{ if cited }} <a href="#fnref-{{ number }}">↩</a>{{ /if }}</li>
+    <li id="fn-{{ number }}">{{ text | entities }}{{ if url }} — {{ url | entities }}{{ /if }}{{ if cited }} <a href="#fnref-{{ number }}">↩</a>{{ /if }}</li>
 {{ /footnotes }}
 ```
 
@@ -79,26 +94,28 @@ php artisan vendor:publish --tag=bard-footnotes-views
 
 ## In PHP
 
-For Blade, Inertia or anywhere outside Antlers, the two static methods do all of it:
+For Blade, Inertia or anywhere outside Antlers, the static methods do all of it:
 
 ```php
 use Goldnead\BardFootnotes\Footnotes;
 
 $sources = Footnotes::sources($entry->sources); // list of ['number', 'text', 'url']
 
-// For Blade:
-{!! Footnotes::render((string) $entry->article, count($sources)) !!}
+// Whatever the article field is: a plain Bard field comes back as rendered HTML,
+// a field with sets comes back as the same set list with every text set rendered.
+$content = Footnotes::renderValue($entry->article, count($sources));
 
 // For Inertia:
-return Inertia::render('Article', [
-    'content' => Footnotes::render((string) $entry->article, count($sources)),
-    'sources' => $sources,
-]);
+return Inertia::render('Article', ['content' => $content, 'sources' => $sources]);
+
+// For Blade, a plain Bard field:
+{!! $content !!}
 ```
 
-`render()` expects the rendered Bard HTML (a Bard value cast to string is exactly that) and
-the number of sources. `sources()` accepts the raw grid value, a Statamic `Value` or a
-collection — whatever the field hands you.
+`renderValue()` takes whatever the field hands you — the HTML string of a plain Bard field,
+or its set list — and returns the same shape with the markers linked (`render()` for a bare
+HTML string, `renderSets()` for a set list). `sources()` accepts the raw grid value, a
+Statamic `Value` or a collection.
 
 ## CSS
 

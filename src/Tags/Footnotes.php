@@ -42,7 +42,8 @@ class Footnotes extends Tags
 
     /**
      * Whether each source is actually cited. Only decidable when the content
-     * comes along; without it every source stays `cited => false`.
+     * comes along — as HTML or as Bard sets, every text set counts; without
+     * it every source stays `cited => false`.
      */
     private function withCited(array $sources): array
     {
@@ -52,7 +53,7 @@ class Footnotes extends Tags
             return array_map(fn (array $source): array => [...$source, 'cited' => false], $sources);
         }
 
-        $rendered = Footnote::render((string) $content, count($sources));
+        $rendered = Footnote::html($content, count($sources));
 
         return array_map(
             fn (array $source): array => [...$source, 'cited' => Footnote::cited($rendered, $source['number'])],

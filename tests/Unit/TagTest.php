@@ -3,12 +3,13 @@
 namespace Goldnead\BardFootnotes\Tests\Unit;
 
 use Goldnead\BardFootnotes\ServiceProvider;
+use Goldnead\BardFootnotes\Tests\Concerns\BuildsBardContent;
 use Goldnead\BardFootnotes\Tests\Concerns\RendersAntlers;
 use Statamic\Testing\AddonTestCase;
 
 class TagTest extends AddonTestCase
 {
-    use RendersAntlers;
+    use BuildsBardContent, RendersAntlers;
 
     protected string $addonServiceProvider = ServiceProvider::class;
 
@@ -74,5 +75,28 @@ class TagTest extends AddonTestCase
     public function test_the_single_tag_without_sources_renders_nothing(): void
     {
         $this->assertSame('', $this->render('{{ footnotes :sources="sources" }}', ['sources' => []]));
+    }
+
+    public function test_content_with_bard_sets_reads_every_text_set_for_cited(): void
+    {
+        $content = $this->bardValue([
+            ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Intro [1].']]],
+            ['type' => 'set', 'attrs' => ['id' => 's1', 'values' => ['type' => 'quote', 'quote' => 'Typed words.']]],
+            ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'More [2].']]],
+        ]);
+
+        $out = $this->render(
+            '{{ footnotes :sources="sources" :content="content" }}[{{ number }}|{{ if cited }}cited{{ /if }}]{{ /footnotes }}',
+            [
+                'sources' => [
+                    ['text' => 'One', 'url' => null],
+                    ['text' => 'Two', 'url' => null],
+                    ['text' => 'Three, never cited', 'url' => null],
+                ],
+                'content' => $content,
+            ],
+        );
+
+        $this->assertSame('[1|cited][2|cited][3|]', $out);
     }
 }

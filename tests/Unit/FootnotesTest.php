@@ -8,6 +8,7 @@ use Illuminate\Support\Collection;
 use Statamic\Fields\Value;
 use Statamic\Fieldtypes\Grid;
 use Statamic\Testing\AddonTestCase;
+use stdClass;
 
 /**
  * Footnotes::render() and sources(): an editor types [1] as plain text into
@@ -45,6 +46,22 @@ class FootnotesTest extends AddonTestCase
         $this->assertSame($html, Footnotes::render($html, 1));
     }
 
+    public function test_every_heading_level_keeps_its_text(): void
+    {
+        $html = '<h1>H [1]</h1><h2>H [1]</h2><h3>H [1]</h3><h4>H [1]</h4><h5>H [1]</h5><h6>H [1]</h6>';
+
+        $this->assertSame($html, Footnotes::render($html, 1));
+    }
+
+    public function test_pre_and_code_keep_their_markers(): void
+    {
+        $html = Footnotes::render('<pre>arr[1]</pre><p>Use <code>arr[1]</code> but [1] stands.</p>', 1);
+
+        $this->assertStringContainsString('<pre>arr[1]</pre>', $html);
+        $this->assertStringContainsString('<code>arr[1]</code>', $html);
+        $this->assertSame(1, substr_count($html, 'href="#fn-1"'));
+    }
+
     public function test_a_source_cited_twice_sets_its_jump_target_once(): void
     {
         $html = Footnotes::render('<p>a[1] b[2]</p><ul><li>c [1]</li></ul>', 2);
@@ -72,6 +89,50 @@ class FootnotesTest extends AddonTestCase
 
         $this->assertStringContainsString('Schöne Grüße<sup class="footnote-ref">', $html);
         $this->assertStringContainsString(' aus München.</p>', $html);
+    }
+
+    /*
+     * renderSets(): a Bard field with sets, one jump target across all of it.
+     */
+
+    public function test_render_sets_renders_every_text_set_and_shares_the_jump_target(): void
+    {
+        $rendered = Footnotes::renderSets([
+            ['type' => 'text', 'text' => '<p>Intro [1].</p>'],
+            ['type' => 'quote', 'quote' => 'Typed words.'],
+            ['type' => 'text', 'text' => '<p>More [1].</p>'],
+        ], 1);
+
+        $this->assertSame(
+            '<p>Intro <sup class="footnote-ref"><a href="#fn-1" id="fnref-1" aria-label="Footnote 1">1</a></sup>.</p>',
+            $rendered[0]['text'],
+        );
+        $this->assertSame(['type' => 'quote', 'quote' => 'Typed words.'], $rendered[1]);
+        $this->assertSame(
+            '<p>More <sup class="footnote-ref"><a href="#fn-1" aria-label="Footnote 1">1</a></sup>.</p>',
+            $rendered[2]['text'],
+        );
+    }
+
+    /*
+     * renderValue(): whatever a Bard field hands over, without a cast.
+     */
+
+    public function test_render_value_takes_unknown_values_without_a_warning(): void
+    {
+        $this->assertSame('', Footnotes::renderValue(null, 1));
+        $this->assertSame('42', Footnotes::renderValue(42, 1));
+        $this->assertSame('', Footnotes::renderValue(new stdClass, 1));
+        $this->assertSame('<p>[1]</p>', Footnotes::renderValue('<p>[1]</p>', 0));
+    }
+
+    public function test_render_value_unwraps_collections_of_sets(): void
+    {
+        $rendered = Footnotes::renderValue(new Collection([
+            ['type' => 'text', 'text' => '<p>Intro [1].</p>'],
+        ]), 0);
+
+        $this->assertSame('<p>Intro [1].</p>', $rendered[0]['text']);
     }
 
     /*
