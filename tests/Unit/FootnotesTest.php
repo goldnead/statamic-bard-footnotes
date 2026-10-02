@@ -6,186 +6,203 @@ use Goldnead\BardFootnotes\Footnotes;
 use Goldnead\BardFootnotes\ServiceProvider;
 use Illuminate\Support\Collection;
 use Statamic\Fields\Value;
-use Statamic\Fieldtypes\Grid;
+use Statamic\Fieldtypes\Bard;
 use Statamic\Testing\AddonTestCase;
-use stdClass;
 
 /**
- * Footnotes::render() and sources(): an editor types [1] as plain text into
- * Bard, the sources live in a grid field, and only the rendered output
- * carries links. These tests pin that transformation.
+ * Footnotes::key(), sources() and number(): the shared source-key and the
+ * two document walks — one reading the sources for the list, one writing
+ * the numbers the FootnoteNode renders.
  */
 class FootnotesTest extends AddonTestCase
 {
     protected string $addonServiceProvider = ServiceProvider::class;
 
     /*
-     * render(): ported from the production code on adriangoldner.com.
+     * key(): what makes two footnote nodes the same source.
      */
 
-    public function test_a_marker_becomes_a_superscript_link(): void
+    public function test_the_same_url_is_the_same_source(): void
     {
-        $html = Footnotes::render('<p>Three weeks.[1] More.</p>', 1);
-
         $this->assertSame(
-            '<p>Three weeks.<sup class="footnote-ref"><a href="#fn-1" id="fnref-1" aria-label="Footnote 1">1</a></sup> More.</p>',
-            $html,
+            Footnotes::key('One', 'https://example.com/a'),
+            Footnotes::key('Completely different text', 'https://example.com/a'),
         );
     }
 
-    public function test_a_marker_without_a_matching_source_stays(): void
+    public function test_the_same_text_differently_written_is_the_same_source(): void
     {
-        $this->assertSame('<p>See [2] and [0].</p>', Footnotes::render('<p>See [2] and [0].</p>', 1));
-        $this->assertSame('<p>No sources [1].</p>', Footnotes::render('<p>No sources [1].</p>', 0));
-    }
-
-    public function test_links_and_headings_keep_their_text(): void
-    {
-        $html = '<h2>Part [1]</h2><p><a href="/x">Link [1]</a></p><h4>Deep [1]</h4>';
-
-        $this->assertSame($html, Footnotes::render($html, 1));
-    }
-
-    public function test_every_heading_level_keeps_its_text(): void
-    {
-        $html = '<h1>H [1]</h1><h2>H [1]</h2><h3>H [1]</h3><h4>H [1]</h4><h5>H [1]</h5><h6>H [1]</h6>';
-
-        $this->assertSame($html, Footnotes::render($html, 1));
-    }
-
-    public function test_pre_and_code_keep_their_markers(): void
-    {
-        $html = Footnotes::render('<pre>arr[1]</pre><p>Use <code>arr[1]</code> but [1] stands.</p>', 1);
-
-        $this->assertStringContainsString('<pre>arr[1]</pre>', $html);
-        $this->assertStringContainsString('<code>arr[1]</code>', $html);
-        $this->assertSame(1, substr_count($html, 'href="#fn-1"'));
-    }
-
-    public function test_a_source_cited_twice_sets_its_jump_target_once(): void
-    {
-        $html = Footnotes::render('<p>a[1] b[2]</p><ul><li>c [1]</li></ul>', 2);
-
-        $this->assertSame(1, substr_count($html, 'id="fnref-1"'));
-        $this->assertSame(2, substr_count($html, 'href="#fn-1"'));
-        $this->assertStringContainsString(
-            '<li>c <sup class="footnote-ref"><a href="#fn-1" aria-label="Footnote 1">1</a></sup></li>',
-            $html,
+        $this->assertSame(
+            Footnotes::key('Example  Source', null),
+            Footnotes::key('example   source', null),
         );
     }
 
-    public function test_two_digit_markers_resolve(): void
+    public function test_different_texts_are_different_sources(): void
     {
-        $html = Footnotes::render('<p>See [12], also [9], not [13].</p>', 12);
-
-        $this->assertStringContainsString('<a href="#fn-12" id="fnref-12" aria-label="Footnote 12">12</a>', $html);
-        $this->assertStringContainsString('<a href="#fn-9" id="fnref-9" aria-label="Footnote 9">9</a>', $html);
-        $this->assertStringContainsString('[13]', $html);
-    }
-
-    public function test_umlaute_survive_the_dom_round_trip(): void
-    {
-        $html = Footnotes::render('<p>Schöne Grüße[1] aus München.</p>', 1);
-
-        $this->assertStringContainsString('Schöne Grüße<sup class="footnote-ref">', $html);
-        $this->assertStringContainsString(' aus München.</p>', $html);
+        $this->assertNotSame(Footnotes::key('One', null), Footnotes::key('Two', null));
     }
 
     /*
-     * renderSets(): a Bard field with sets, one jump target across all of it.
+     * sources(): the list, in order of first citation.
      */
 
-    public function test_render_sets_renders_every_text_set_and_shares_the_jump_target(): void
+    public function test_sources_collects_footnotes_in_reading_order(): void
     {
-        $rendered = Footnotes::renderSets([
-            ['type' => 'text', 'text' => '<p>Intro [1].</p>'],
-            ['type' => 'quote', 'quote' => 'Typed words.'],
-            ['type' => 'text', 'text' => '<p>More [1].</p>'],
-        ], 1);
+        $sources = Footnotes::sources($this->doc());
 
-        $this->assertSame(
-            '<p>Intro <sup class="footnote-ref"><a href="#fn-1" id="fnref-1" aria-label="Footnote 1">1</a></sup>.</p>',
-            $rendered[0]['text'],
-        );
-        $this->assertSame(['type' => 'quote', 'quote' => 'Typed words.'], $rendered[1]);
-        $this->assertSame(
-            '<p>More <sup class="footnote-ref"><a href="#fn-1" aria-label="Footnote 1">1</a></sup>.</p>',
-            $rendered[2]['text'],
-        );
-    }
-
-    /*
-     * renderValue(): whatever a Bard field hands over, without a cast.
-     */
-
-    public function test_render_value_takes_unknown_values_without_a_warning(): void
-    {
-        $this->assertSame('', Footnotes::renderValue(null, 1));
-        $this->assertSame('42', Footnotes::renderValue(42, 1));
-        $this->assertSame('', Footnotes::renderValue(new stdClass, 1));
-        $this->assertSame('<p>[1]</p>', Footnotes::renderValue('<p>[1]</p>', 0));
-    }
-
-    public function test_render_value_unwraps_collections_of_sets(): void
-    {
-        $rendered = Footnotes::renderValue(new Collection([
-            ['type' => 'text', 'text' => '<p>Intro [1].</p>'],
-        ]), 0);
-
-        $this->assertSame('<p>Intro [1].</p>', $rendered[0]['text']);
-    }
-
-    /*
-     * sources().
-     */
-
-    public function test_sources_drop_empty_rows_renumber_and_clean_urls(): void
-    {
         $this->assertSame([
-            ['number' => 1, 'text' => 'First', 'url' => 'https://example.com/a'],
-            ['number' => 2, 'text' => 'Second', 'url' => null],
-        ], Footnotes::sources([
-            ['text' => '   ', 'url' => 'https://example.com'],
-            ['text' => ' First ', 'url' => 'https://example.com/a'],
-            ['text' => 'Second', 'url' => 'javascript:alert(1)'],
-        ]));
+            ['number' => 1, 'text' => 'Smith, p. 12', 'url' => null],
+            ['number' => 2, 'text' => 'Jones', 'url' => null],
+            ['number' => 3, 'text' => 'Ebd.', 'url' => 'https://example.com/smith'],
+        ], $sources);
     }
 
-    public function test_sources_keep_an_uppercase_https_url(): void
+    public function test_a_repeated_source_is_listed_once(): void
     {
-        $sources = Footnotes::sources([['text' => 'A', 'url' => 'HTTPS://EXAMPLE.COM/a']]);
-
-        $this->assertSame('HTTPS://EXAMPLE.COM/a', $sources[0]['url']);
+        $this->assertCount(3, Footnotes::sources($this->doc()));
     }
 
-    public function test_sources_accept_values_and_collections(): void
+    public function test_a_url_that_is_not_http_is_dropped_but_counted(): void
     {
-        $value = new Value([['text' => 'Via value', 'url' => null]], 'sources', new Grid);
+        $sources = Footnotes::sources([
+            ['type' => 'paragraph', 'content' => [
+                ['type' => 'footnote', 'attrs' => ['text' => 'Nope', 'url' => 'javascript:alert(1)']],
+            ]],
+        ]);
 
-        $this->assertSame('Via value', Footnotes::sources($value)[0]['text']);
-
-        $collection = new Collection([['text' => 'Via collection', 'url' => null]]);
-
-        $this->assertSame('Via collection', Footnotes::sources($collection)[0]['text']);
+        $this->assertSame([['number' => 1, 'text' => 'Nope', 'url' => null]], $sources);
     }
 
-    public function test_sources_reject_everything_that_is_not_a_row_list(): void
+    public function test_sources_accepts_a_bard_value_and_a_collection(): void
     {
+        $value = new Value($this->doc(), 'content', new Bard);
+
+        $this->assertSame(Footnotes::sources($this->doc()), Footnotes::sources($value));
+        $this->assertSame(Footnotes::sources($this->doc()), Footnotes::sources(new Collection($this->doc())));
+    }
+
+    public function test_anything_without_footnotes_has_no_sources(): void
+    {
+        $this->assertSame([], Footnotes::sources([['type' => 'paragraph']]));
+        $this->assertSame([], Footnotes::sources('rendered html has no nodes to read'));
         $this->assertSame([], Footnotes::sources(null));
-        $this->assertSame([], Footnotes::sources('nope'));
-        $this->assertSame([], Footnotes::sources('3'));
     }
 
     /*
-     * cited().
+     * number(): the augment hook's walk.
      */
 
-    public function test_cited_reads_the_rendered_html(): void
+    public function test_number_writes_first_occurrence_numbers(): void
     {
-        $html = Footnotes::render('<p>a [1]</p>', 1);
+        $numbered = Footnotes::number($this->doc());
 
-        $this->assertTrue(Footnotes::cited($html, 1));
-        $this->assertFalse(Footnotes::cited($html, 2));
-        $this->assertFalse(Footnotes::cited('<p>a [1]</p>', 1));
+        $attrs = array_map(
+            fn (array $footnote): array => $footnote['attrs'],
+            $this->footnotesOf($numbered),
+        );
+
+        $this->assertSame([
+            ['text' => 'Smith, p. 12', 'url' => null, 'number' => 1, 'first' => true],
+            ['text' => 'Jones', 'url' => null, 'number' => 2, 'first' => true],
+            // The same source, differently written: same number, no second
+            // jump target.
+            ['text' => 'smith, p. 12', 'url' => null, 'number' => 1, 'first' => false],
+            ['text' => 'Ebd.', 'url' => 'https://example.com/smith', 'number' => 3, 'first' => true],
+            ['text' => 'See the site', 'url' => 'https://example.com/smith', 'number' => 3, 'first' => false],
+        ], $attrs);
+    }
+
+    public function test_number_runs_across_set_markers(): void
+    {
+        $numbered = Footnotes::number([
+            ['type' => 'paragraph', 'content' => [
+                ['type' => 'footnote', 'attrs' => ['text' => 'A', 'url' => null]],
+            ]],
+            ['type' => 'set', 'attrs' => ['id' => 's1', 'values' => ['type' => 'quote', 'quote' => 'q']]],
+            ['type' => 'paragraph', 'content' => [
+                ['type' => 'footnote', 'attrs' => ['text' => 'B', 'url' => null]],
+            ]],
+        ]);
+
+        $this->assertSame(1, $this->footnotesOf($numbered)[0]['attrs']['number']);
+        $this->assertSame(2, $this->footnotesOf($numbered)[1]['attrs']['number']);
+    }
+
+    public function test_number_does_not_descend_into_set_values(): void
+    {
+        // A bard field nested inside a set is its own document, augmented
+        // (and numbered) on its own — the outer walk must not pre-number it.
+        $numbered = Footnotes::number([
+            ['type' => 'set', 'attrs' => ['id' => 's1', 'values' => [
+                'type' => 'quote',
+                'nested' => [['type' => 'paragraph', 'content' => [
+                    ['type' => 'footnote', 'attrs' => ['text' => 'inner', 'url' => null]],
+                ]]],
+            ]]],
+        ]);
+
+        $this->assertSame([], $this->footnotesOf($numbered));
+        $this->assertSame('inner', $numbered[0]['attrs']['values']['nested'][0]['content'][0]['attrs']['text']);
+    }
+
+    public function test_a_document_without_footnotes_passes_through_unchanged(): void
+    {
+        $doc = [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'plain']]]];
+
+        $this->assertSame($doc, Footnotes::number($doc));
+        $this->assertSame('unchanged', Footnotes::number('unchanged'));
+    }
+
+    /**
+     * Two paragraphs with five footnote nodes: a source repeated by text
+     * (differently written), a second source, and one repeated by URL.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function doc(): array
+    {
+        return [
+            ['type' => 'paragraph', 'content' => [
+                ['type' => 'text', 'text' => 'Three weeks'],
+                ['type' => 'footnote', 'attrs' => ['text' => 'Smith, p. 12', 'url' => null]],
+                ['type' => 'text', 'text' => 'of work'],
+                ['type' => 'footnote', 'attrs' => ['text' => 'Jones', 'url' => null]],
+            ]],
+            ['type' => 'paragraph', 'content' => [
+                ['type' => 'footnote', 'attrs' => ['text' => 'smith, p. 12', 'url' => null]],
+                ['type' => 'footnote', 'attrs' => ['text' => 'Ebd.', 'url' => 'https://example.com/smith']],
+                ['type' => 'footnote', 'attrs' => ['text' => 'See the site', 'url' => 'https://example.com/smith']],
+            ]],
+        ];
+    }
+
+    /**
+     * @param  list<mixed>  $doc
+     * @return list<array<string, mixed>>
+     */
+    private function footnotesOf(array $doc): array
+    {
+        $found = [];
+
+        $walk = function (array $nodes) use (&$walk, &$found): void {
+            foreach ($nodes as $node) {
+                if (! is_array($node)) {
+                    continue;
+                }
+
+                if (($node['type'] ?? null) === 'footnote') {
+                    $found[] = $node;
+                }
+
+                if (isset($node['content']) && is_array($node['content'])) {
+                    $walk($node['content']);
+                }
+            }
+        };
+
+        $walk($doc);
+
+        return $found;
     }
 }
