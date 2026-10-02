@@ -1,0 +1,77 @@
+{
+  "name": "goldnead/statamic-bard-footnotes",
+  "description": "Footnotes for Bard: type [1] in the text, keep the sources in a grid, get superscript links and a source list.",
+  "type": "statamic-addon",
+  "license": "MIT",
+  "keywords": [
+    "statamic",
+    "statamic-addon",
+    "bard",
+    "footnotes"
+  ],
+  "autoload": {
+    "psr-4": {
+      "Goldnead\\BardFootnotes\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Goldnead\\BardFootnotes\\Tests\\": "tests"
+    }
+  },
+  "extra": {
+    "statamic": {
+      "slug": "statamic-bard-footnotes",
+      "name": "Bard Footnotes",
+      "description": "Footnotes for Bard: type [1] in the text, keep the sources in a grid, get superscript links and a source list.",
+      "url": "https://github.com/goldnead/statamic-bard-footnotes",
+      "developer": "Adrian Goldner",
+      "developer-url": "https://adriangoldner.dev"
+    },
+    "laravel": {
+      "providers": [
+        "Goldnead\\BardFootnotes\\ServiceProvider"
+      ]
+    }
+  },
+  "authors": [
+    {
+      "name": "Adrian Goldner",
+      "email": "info@adriangoldner.com"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/goldnead/statamic-bard-footnotes/issues",
+    "source": "https://github.com/goldnead/statamic-bard-footnotes"
+  },
+  "require": {
+    "php": "^8.2",
+    "statamic/cms": "^5.0 | ^6.0"
+  },
+  "require-dev": {
+    "larastan/larastan": "^3.0",
+    "laravel/pint": "^1.18",
+    "orchestra/testbench": "^9.0 | ^10.0",
+    "phpunit/phpunit": "^10.5 | ^11.0"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true,
+    "allow-plugins": true
+  },
+  "scripts": {
+    "test": [
+      "php -d memory_limit=-1 -d max_execution_time=0 ./vendor/bin/phpunit"
+    ],
+    "lint": [
+      "./vendor/bin/pint --test"
+    ],
+    "fix": [
+      "./vendor/bin/pint"
+    ],
+    "analyse": [
+      "./vendor/bin/phpstan analyse"
+    ]
+  }
+}

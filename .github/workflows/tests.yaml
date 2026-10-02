@@ -1,0 +1,117 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [main, '*.x']
+  pull_request:
+
+permissions: {}
+
+jobs:
+  php_tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Every laravel/framework release below 12 carries unpatched security
+          # advisories, which Composer refuses to install. Statamic 5 supports
+          # Laravel 12 since 5.66, so the Statamic 5 leg runs there. That is why
+          # there is no Laravel axis in this matrix: there is only one installable
+          # Laravel major for the range this package declares.
+          - php: "8.2"
+            statamic: "5.*"
+            laravel: "12.*"
+            testbench: "10.*"
+            stability: prefer-stable
+          - php: "8.3"
+            statamic: "5.*"
+            laravel: "12.*"
+            testbench: "10.*"
+            stability: prefer-stable
+          - php: "8.2"
+            statamic: "6.*"
+            laravel: "12.*"
+            testbench: "10.*"
+            stability: prefer-stable
+          - php: "8.3"
+            statamic: "6.*"
+            laravel: "12.*"
+            testbench: "10.*"
+            stability: prefer-stable
+          - php: "8.4"
+            statamic: "6.*"
+            laravel: "12.*"
+            testbench: "10.*"
+            stability: prefer-stable
+          # The floor of the declared range. Without this leg the constraints in
+          # composer.json are a claim nobody verifies. Resolves to the oldest
+          # Statamic 5 release that still installs on Laravel 12.
+          - php: "8.2"
+            statamic: "5.*"
+            laravel: "12.*"
+            testbench: "10.*"
+            stability: prefer-lowest
+
+    name: PHP ${{ matrix.php }} · Statamic ${{ matrix.statamic }} · ${{ matrix.stability }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" "statamic/cms:${{ matrix.statamic }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+
+      - name: Run PHPUnit
+        run: composer test
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Code style
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - run: composer install --prefer-dist --no-interaction
+
+      # Check, never fix. Auto-committing style fixes onto a contributor's branch
+      # rewrites their work without asking.
+      - run: vendor/bin/pint --test
+
+  static_analysis:
+    runs-on: ubuntu-latest
+    name: Static analysis
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - run: composer install --prefer-dist --no-interaction
+
+      - run: vendor/bin/phpstan analyse --no-progress

@@ -1,0 +1,4 @@
+# Empty on purpose: the first run produced no findings. A new entry here needs
+# a written reason next to it.
+parameters:
+    ignoreErrors: []

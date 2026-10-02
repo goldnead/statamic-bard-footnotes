@@ -1,0 +1,21 @@
+title: Sources
+fields:
+  -
+    handle: sources
+    field:
+      type: grid
+      display: Sources
+      add_row: 'Add source'
+      instructions: 'One source per row. Reference it in the text with [1], [2] … in the order of this list.'
+      fields:
+        -
+          handle: text
+          field:
+            type: text
+            display: Source
+        -
+          handle: url
+          field:
+            type: text
+            input_type: url
+            display: Link

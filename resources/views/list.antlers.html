@@ -1,0 +1,15 @@
+<section class="footnotes" aria-labelledby="footnotes-title">
+    <h2 id="footnotes-title">{{ trans key="bard-footnotes::messages.title" }}</h2>
+    <ol>
+    {{ sources }}
+        <li id="fn-{{ number }}">
+            {{ if url }}
+                <a href="{{ url | entities }}" target="_blank" rel="noopener noreferrer">{{ text | entities }}</a>
+            {{ else }}
+                {{ text | entities }}
+            {{ /if }}
+            {{ if cited }} <a href="#fnref-{{ number }}" class="footnote-back" aria-label="{{ trans key="bard-footnotes::messages.back" :number="number" }}">↩</a>{{ /if }}
+        </li>
+    {{ /sources }}
+    </ol>
+</section>
