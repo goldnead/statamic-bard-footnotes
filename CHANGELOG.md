@@ -34,6 +34,18 @@ All notable changes to `statamic-bard-footnotes` will be documented in this file
   ("Used N times. Changes apply to every place.") when it applies. Removing a footnote
   still only removes that one spot.
 - The popover focuses the source text field on open, like Bard's link toolbar.
+- The toolbar button inserts the footnote at the end of the selection; selected text is kept
+  (it used to be replaced) and is not taken over as the source.
+- Picking another existing source, or "New source", in a footnote's popover re-points only that
+  footnote; before, it overwrote every place citing the old source. Editing the source it
+  already cites still changes all of them, and the "Used N times" hint now shows only then.
+- A footnote with neither text nor link is ignored: no number, no list entry, no markup.
+- The source key treats Unicode whitespace (NBSP, U+FEFF, U+0085, `\p{Z}`) the same in PHP and
+  in the editor, so numbers in the CP and on the page can no longer disagree.
+- `{{ footnotes field="…" }}` logs one warning in debug mode when the field is missing or not a
+  Bard value.
+- Limits documented: `save_html: true` is unsupported (the saved HTML shows `[source]` instead of
+  an empty superscript), and a Bard field nested in a set reuses the ids `fn-1` … of the outer list.
 - The superscript in the editor is link-colored, underlines on hover, highlights when
   selected, and carries the source as tooltip; the toolbar icon is its own shape
   (text line, superscript 1, footnote rule).

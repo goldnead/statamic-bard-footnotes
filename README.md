@@ -47,14 +47,22 @@ toolbar button is opt-in, the node itself always renders.
 
 ## In the CP
 
-Select some text (or just place the cursor) and click **Footnote**. Fill in the source and,
-optionally, a link; Apply inserts the footnote at the cursor. The popover's select at the top
-offers the sources already cited in this field — picking one fills the fields with its text and
-link. The editor shows the live superscript number; hovering it reveals the source.
+Place the cursor where the reference belongs and click **Footnote**. Fill in the source and,
+optionally, a link; Apply inserts the footnote at the cursor. With text selected, the footnote is
+inserted at the **end of the selection** and the selected text stays as it is (it is not used as
+the source). The popover's select at the top offers the sources already cited in this field —
+picking one fills the fields with its text and link. The editor shows the live superscript number;
+hovering it reveals the source.
+
+Clicking a footnote reopens the popover. Editing the source it already cites changes **every**
+place citing it (the popover says "Used N times"). Picking a different source, or "New source",
+re-points only this one footnote. A footnote with neither text nor link has no source: it gets no
+number, no list entry and renders nothing.
 
 Numbers are never stored. They are derived from the document: order of first occurrence, with the
 same source keeping the same number. "Same source" means the same link (trimmed), or — without a
-link — the same text (whitespace collapsed, case-insensitive).
+link — the same text (whitespace trimmed and collapsed, Unicode spaces such as NBSP included,
+case-insensitive). PHP and the editor apply exactly the same rule.
 
 ## In Antlers
 
@@ -83,7 +91,10 @@ separately, the same way Statamic augments it.)
 ```
 
 The tag reads the field's raw value from the template context, by handle — a `:content="content"`
-binding would arrive as already-rendered HTML, too late to read the footnotes from. Each source
+binding would arrive as already-rendered HTML, too late to read the footnotes from. `field` is
+therefore the handle of a Bard variable available where the tag is used (an entry's `content`, a
+loop variable, …). If it is missing or not a Bard value, the tag renders nothing; with
+`APP_DEBUG=true` it also writes one warning to the log naming the field. Each source
 carries `number`, `text`, `url` (`null` unless `http(s)`). `no_results` and `total_results` behave
 like in Statamic's collection tags.
 
@@ -136,6 +147,11 @@ sup.footnote-ref {
 
 - The ids `fn-n` and `fnref-n` are fixed: one footnote list per page. Two `footnotes` tags on the
   same page produce the same ids.
+- **Requires `save_html: false`, the default.** The footnotes are numbered from the saved JSON. A
+  Bard field saving HTML (`save_html: true`) stores the superscript without a number and has no
+  source list: the footnote reads `[source]` in the saved markup and nothing more.
+- **A Bard field nested in a set** numbers its footnotes on its own, from 1. Its `#fn-1` and
+  `#fnref-1` collide with the same ids of the outer field's list when both appear on one page.
 - **Removing the addon empties the field.** A Bard document containing footnote nodes needs this
   addon's node registered — for rendering *and* in the CP. With the addon uninstalled or disabled,
   a Bard field holding footnotes loads **empty** in the CP, and the next save destroys the value.
