@@ -1,11 +1,14 @@
 <script>
 import { Button, Description, Field, Input, Select, Stack, StackContent, StackFooter } from '@statamic/cms/ui';
-import { sourceKey } from '../footnotes.js';
+import { reusedCount, sourceKey } from '../footnotes.js';
 
 /**
  * The footnote form, in the same slide-out Stack Bard's own link button
  * uses. Pure presentational: the parents own the editor. Emits
- * `apply({ text, url })` and `remove`, and closes itself.
+ * `apply({ text, url, source })` — `source` is the key of the source
+ * picked in the select, null for "New source" — and `remove`, and closes
+ * itself. `ownKey` is the source of the footnote being edited (null for
+ * the toolbar, which inserts a new one).
  */
 export default {
     components: { Button, Description, Field, Input, Select, Stack, StackContent, StackFooter },
@@ -15,6 +18,7 @@ export default {
         text: { type: String, default: '' },
         url: { type: String, default: null },
         existingSources: { type: Array, default: () => [] },
+        ownKey: { type: String, default: null },
         showRemove: { type: Boolean, default: false },
     },
 
@@ -38,6 +42,15 @@ export default {
         // possible one — can collide with the "new" sentinel.
         selectedSource() {
             return this.existingSources.find((source) => this.optionValue(source.key) === this.source) ?? null;
+        },
+        // "Used N times": the opened footnote's own source, only while
+        // that one is selected (0 = no hint).
+        reused() {
+            return reusedCount({
+                ownKey: this.ownKey,
+                selectedKey: this.selectedSource?.key ?? null,
+                sources: this.existingSources,
+            });
         },
         validUrl() {
             const url = this.sourceUrl.trim();
@@ -95,7 +108,11 @@ export default {
 
             const url = this.sourceUrl.trim();
 
-            this.$emit('apply', { text: this.sourceText.trim(), url: url === '' ? null : url });
+            this.$emit('apply', {
+                text: this.sourceText.trim(),
+                url: url === '' ? null : url,
+                source: this.selectedSource?.key ?? null,
+            });
             this.close();
         },
         remove() {
@@ -131,12 +148,13 @@ export default {
                     v-model="source"
                     :options="options"
                 />
-                <!-- Editing a reused source changes every place citing it;
-                     "Remove Footnote" below only removes this one. -->
+                <!-- Editing the reused source of THIS footnote changes every
+                     place citing it; picking another source or "Remove
+                     Footnote" below only touches this one. -->
                 <Description
-                    v-if="selectedSource?.count > 1"
+                    v-if="reused > 0"
                     class="mt-2"
-                    :text="__('bard-footnotes::messages.reused_source', { count: selectedSource.count })"
+                    :text="__('bard-footnotes::messages.reused_source', { count: reused })"
                 />
             </Field>
             <Input

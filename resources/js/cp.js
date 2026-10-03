@@ -9,7 +9,7 @@
 
 import FootnoteNodeView from './components/FootnoteNodeView.vue';
 import FootnoteToolbarButton from './components/FootnoteToolbarButton.vue';
-import { positionsCiting } from './footnotes.js';
+import { footnoteRenderSpec, insertFootnoteAtEnd, setFootnoteAttrs, updateFootnoteSource } from './footnotes.js';
 
 Statamic.booting(() => {
     Statamic.$components.register('FootnoteToolbarButton', FootnoteToolbarButton);
@@ -46,15 +46,7 @@ Statamic.booting(() => {
             },
 
             renderHTML({ node }) {
-                return [
-                    'sup',
-                    {
-                        'data-footnote': '',
-                        'data-text': node.attrs.text,
-                        'data-url': node.attrs.url,
-                        class: 'footnote-ref',
-                    },
-                ];
+                return footnoteRenderSpec(node.attrs);
             },
 
             addNodeView() {
@@ -63,33 +55,16 @@ Statamic.booting(() => {
 
             addCommands() {
                 return {
+                    // At the END of the selection: selected text stays.
                     insertFootnote: (attrs) => ({ chain }) =>
-                        chain().focus().insertContent({ type: this.name, attrs }).run(),
+                        chain().focus().command(insertFootnoteAtEnd(this.type, attrs)).run(),
 
-                    // Editing a source edits every place citing it: one
-                    // transaction over every node with the old key (attrs
-                    // never change a node's size, so the positions stay
-                    // valid while the loop runs).
-                    updateFootnoteSource: (key, attrs) => ({ state, dispatch }) => {
-                        const positions = positionsCiting(state.doc, key);
-
-                        if (positions.length === 0) {
-                            return false;
-                        }
-
-                        if (dispatch) {
-                            const tr = state.tr;
-
-                            for (const pos of positions) {
-                                const node = tr.doc.nodeAt(pos);
-                                tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...attrs });
-                            }
-
-                            dispatch(tr);
-                        }
-
-                        return true;
-                    },
+                    // Editing a source edits every place citing it (one
+                    // transaction); pointing one node elsewhere changes
+                    // only that node. Both live in footnotes.js, where
+                    // they are tested against a real ProseMirror schema.
+                    updateFootnoteSource,
+                    setFootnoteAttrs,
                 };
             },
         });

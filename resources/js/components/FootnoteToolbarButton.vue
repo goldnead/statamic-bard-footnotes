@@ -32,8 +32,11 @@ export default {
     },
 
     methods: {
-        apply(attrs) {
-            this.editor.chain().focus().insertFootnote(attrs).run();
+        // Inserts after the selection (selected text stays). Whatever the
+        // select picked, the toolbar only ever inserts: the `source` key
+        // is for the node view's edit decision.
+        apply({ text, url }) {
+            this.editor.chain().focus().insertFootnote({ text, url }).run();
         },
     },
 };

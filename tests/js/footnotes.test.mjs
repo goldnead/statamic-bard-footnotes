@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { readFileSync } from 'node:fs';
+
 import { collectFootnotes, distinctSources, positionsCiting, sourceKey } from '../../resources/js/footnotes.js';
+
+// Shared with tests/Unit/FootnotesTest.php: PHP and JS must agree on every row.
+const fixture = JSON.parse(readFileSync(new URL('../fixtures/keys.json', import.meta.url), 'utf8'));
 
 /*
  * A minimal stand-in for a ProseMirror document: descendants() walking
@@ -82,4 +87,21 @@ test('positionsCiting returns every node of a source, and none for an unknown on
     assert.equal(smithPositions.length, 2);
 
     assert.deepEqual(positionsCiting(document, sourceKey({ text: 'Nobody cites this' })), []);
+});
+
+test('sourceKey agrees with the shared fixture (same rows as the PHP key)', () => {
+    for (const row of fixture.keys) {
+        assert.equal(sourceKey({ text: row.text, url: row.url }), row.key, row.name);
+    }
+});
+
+test('collectFootnotes numbers like the shared fixture; empty footnotes do not count', () => {
+    for (const row of fixture.numbering) {
+        const collected = collectFootnotes(doc([paragraph(...row.nodes.map((n) => footnote(n.text, n.url)))]));
+        const expected = row.numbers.filter((n) => n !== null);
+
+        assert.deepEqual(collected.map((f) => f.number), expected, row.name);
+        assert.deepEqual(distinctSources(doc([paragraph(...row.nodes.map((n) => footnote(n.text, n.url)))])).map((s) => s.number),
+            [...new Set(expected)], row.name);
+    }
 });

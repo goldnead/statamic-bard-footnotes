@@ -1,6 +1,6 @@
 <script>
 import FootnotePopover from './FootnotePopover.vue';
-import { collectFootnotes, distinctSources, sourceKey } from '../footnotes.js';
+import { collectFootnotes, distinctSources, resolveApply, sourceKey } from '../footnotes.js';
 
 /**
  * A footnote in the text: a superscript with its live number — computed
@@ -34,6 +34,9 @@ export default {
 
             return url ? `${text} (${url})` : text;
         },
+        ownKey() {
+            return sourceKey(this.node.attrs) || null;
+        },
     },
 
     watch: {
@@ -60,11 +63,18 @@ export default {
 
             this.number = mine ? mine.number : null;
         },
-        apply(attrs) {
-            // A reused source is one source: the change lands on every
-            // node citing the old key, in one transaction. Remove stays
-            // local (deleteNode, below).
-            this.editor.commands.updateFootnoteSource(sourceKey(this.node.attrs), attrs);
+        apply({ source, ...attrs }) {
+            // Editing the footnote's own source edits the source: every
+            // node citing the old key changes, in one transaction. Picking
+            // another source (or a new one) re-points this node only, as
+            // does Remove (deleteNode, below).
+            const decision = resolveApply({ node: this.node.attrs, selectedKey: source, attrs });
+
+            if (decision.mode === 'source') {
+                this.editor.commands.updateFootnoteSource(decision.key, decision.attrs);
+            } else {
+                this.editor.commands.setFootnoteAttrs(this.getPos(), decision.attrs);
+            }
         },
     },
 };
@@ -86,6 +96,7 @@ export default {
             :text="node.attrs.text"
             :url="node.attrs.url"
             :existing-sources="sources"
+            :own-key="ownKey"
             show-remove
             @apply="apply"
             @remove="deleteNode"
