@@ -2,7 +2,7 @@
 
 All notable changes to `statamic-bard-footnotes` will be documented in this file.
 
-## 2.0.0 - unreleased
+## 2.0.0 - 2026-10-03
 
 ### Breaking: footnotes move into the text
 
