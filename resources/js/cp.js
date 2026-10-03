@@ -4,20 +4,50 @@
  * Registers the `footnote` inline node (always: a field without the
  * button must still display the footnotes it already carries) and the
  * toolbar button (only in fields whose `buttons` list contains
- * `footnote`, exactly like a core button).
+ * `footnote`, exactly like a core button), plus the source overview
+ * under the editor (2.1), shown once a field cites a source.
  */
 
 import FootnoteNodeView from './components/FootnoteNodeView.vue';
+import FootnoteSources from './components/FootnoteSources.vue';
 import FootnoteToolbarButton from './components/FootnoteToolbarButton.vue';
 import { footnoteRenderSpec, insertFootnoteAtEnd, setFootnoteAttrs, updateFootnoteSource } from './footnotes.js';
+import { sourcesPanelView } from './sourcesPanel.js';
 
 Statamic.booting(() => {
     Statamic.$components.register('FootnoteToolbarButton', FootnoteToolbarButton);
 
-    Statamic.$bard.addExtension(({ tiptap }) => {
-        const { Node } = tiptap.core;
+    Statamic.$bard.addExtension(({ bard, tiptap }) => {
+        const { Extension, Node } = tiptap.core;
+        const { Plugin, PluginKey } = tiptap.pm.state;
 
-        return Node.create({
+        // The source overview under the editor frame (see sourcesPanel.js):
+        // a plugin view per editor, so it follows Bard's editor through
+        // fullscreen and is gone with it. Registered for every Bard, like
+        // the node; it renders only once the field cites a source.
+        const sourcesOverview = Extension.create({
+            name: 'footnoteSourcesOverview',
+
+            addProseMirrorPlugins() {
+                const editor = this.editor;
+
+                return [
+                    new Plugin({
+                        key: new PluginKey('footnoteSourcesOverview'),
+                        view: (view) =>
+                            sourcesPanelView({
+                                view,
+                                editor,
+                                bard,
+                                VueRenderer: tiptap.vue3.VueRenderer,
+                                component: FootnoteSources,
+                            }),
+                    }),
+                ];
+            },
+        });
+
+        const footnote = Node.create({
             name: 'footnote',
             inline: true,
             group: 'inline',
@@ -68,6 +98,8 @@ Statamic.booting(() => {
                 };
             },
         });
+
+        return [footnote, sourcesOverview];
     });
 
     Statamic.$bard.buttons((buttons) => {

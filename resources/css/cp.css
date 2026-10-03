@@ -21,3 +21,31 @@
 .bard-content sup.footnote-ref.is-selected {
     @apply bg-blue-400/25 decoration-current;
 }
+
+/*
+ * The source overview under the editor frame (FootnoteSources.vue, placed
+ * by sourcesPanel.js inside a wrapper div). The same strip as core's
+ * .bard-footer-toolbar (reading time): border on top, background, text-xs,
+ * 8px 12px — on the themeable content background rather than plain white.
+ * Unlayered, so it wins over core's @layer ui rules.
+ */
+.bard-footnotes-sources {
+    @apply rounded-b-lg border-t bg-content-bg text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400;
+    padding: 8px 12px;
+}
+
+/* The editor is no longer the last box: square its bottom, as core does
+   for its footer toolbar. */
+.bard-fieldtype:not(.bard-fullscreen):has(> div > .bard-footnotes-sources) > .bard-editor {
+    border-radius: 0;
+}
+
+/* Core's footer toolbar follows and carries the rounded bottom. */
+.bard-fieldtype:has(> .bard-footer-toolbar) > div > .bard-footnotes-sources {
+    @apply rounded-none;
+}
+
+/* Fullscreen: a card of its own under the centered editor card. */
+.bard-fieldtype.bard-fullscreen > div > .bard-footnotes-sources {
+    @apply mx-auto mb-6 max-w-[65rem] rounded-lg border-t-0 px-8 py-4 shadow-ui-md dark:bg-gray-925 dark:shadow-lg;
+}

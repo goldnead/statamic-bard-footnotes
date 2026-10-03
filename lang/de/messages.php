@@ -14,4 +14,12 @@ return [
     'url_hint' => 'Ein Link muss mit http:// oder https:// beginnen.',
     'apply_footnote' => 'Fußnote anwenden',
     'remove_footnote' => 'Fußnote entfernen',
+    'sources_heading' => 'Quellen (:count)',
+    'cited_count' => ':count×',
+    'cited_times' => ':count-mal zitiert',
+    'open_link' => 'Link in neuem Tab öffnen',
+    'jump' => 'Zur Stelle',
+    'jump_next' => 'Erneut klicken für die nächste Stelle',
+    'edit' => 'Bearbeiten',
+    'edit_source' => 'Quelle bearbeiten',
 ];

@@ -59,6 +59,26 @@ place citing it (the popover says "Used N times"). Picking a different source, o
 re-points only this one footnote. A footnote with neither text nor link has no source: it gets no
 number, no list entry and renders nothing.
 
+### Sources under the field
+
+As soon as a field cites a source, a compact list **Sources (N)** appears under the editor, inside
+the field. It is where the sources of the text are kept in order:
+
+- one row per source, in number order, with the same live number the text shows,
+- the source text (a link source shows a small ↗ that opens it in a new tab),
+- how often it is cited (`2×`),
+- **Edit** opens the same panel as clicking a footnote, but for the whole source: Apply changes
+  **every** place citing it. Picking another source in the panel's select merges this source into
+  that one — all its places now cite the other source.
+- **Jump** selects the first place in the text that cites the source and scrolls to it; with
+  several places, clicking again moves on to the next one.
+
+The list updates with every change in the editor and disappears when the last footnote goes. It
+shows in every Bard field that holds footnotes, with or without the toolbar button. A read-only
+field lists its sources without Edit. Footnotes are **removed in the text**, where they stand
+(click the footnote, Remove Footnote) — there is no "remove" in the list, so nothing leaves the
+text without the sentence around it in view.
+
 Numbers are never stored. They are derived from the document: order of first occurrence, with the
 same source keeping the same number. "Same source" means the same link (trimmed), or — without a
 link — the same text (whitespace trimmed and collapsed, Unicode spaces such as NBSP included,

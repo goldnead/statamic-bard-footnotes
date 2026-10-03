@@ -111,6 +111,56 @@ export function positionsCiting(doc, key) {
 }
 
 /**
+ * Does the document cite any source at all? The source overview under the
+ * editor exists only then (a footnote without text and link cites nothing).
+ */
+export function hasFootnotes(doc) {
+    let found = false;
+
+    doc.descendants((node) => {
+        if (found) {
+            return false;
+        }
+
+        if (node.type.name === 'footnote') {
+            found = sourceKey(node.attrs) !== '';
+
+            return false;
+        }
+
+        return true;
+    });
+
+    return found;
+}
+
+/**
+ * Where the overview's "Jump" goes: the first footnote citing the source —
+ * or, when the selection already sits on one of them (`from` is its
+ * position), the next one, wrapping round to the first. Null when the
+ * source is no longer cited.
+ */
+export function nextCitation(doc, key, from) {
+    const positions = positionsCiting(doc, key);
+
+    if (positions.length === 0) {
+        return null;
+    }
+
+    const current = positions.indexOf(from);
+
+    return current === -1 ? positions[0] : positions[(current + 1) % positions.length];
+}
+
+/**
+ * Only http(s) links become clickable in the CP — the same rule the PHP
+ * side applies before a url reaches an href.
+ */
+export function isHttpUrl(url) {
+    return typeof url === 'string' && /^https?:\/\//i.test(url.trim());
+}
+
+/**
  * The popover's Apply, as a decision: which nodes does it change?
  *
  * - another existing source selected, or "New source" (`selectedKey`
@@ -136,9 +186,13 @@ export function resolveApply({ node, selectedKey, attrs }) {
  * speaks of: the citations of the OPENED node's own source, but only
  * while that source is the selected one, and only when it is reused.
  * Otherwise 0 (no hint).
+ *
+ * `wholeSource`: the popover edits a SOURCE (opened from the overview under
+ * the editor), not one footnote — Apply changes every place whatever the
+ * select shows, so the hint stays as long as the source is reused.
  */
-export function reusedCount({ ownKey, selectedKey, sources }) {
-    if (!ownKey || selectedKey !== ownKey) {
+export function reusedCount({ ownKey, selectedKey, sources, wholeSource = false }) {
+    if (!ownKey || (!wholeSource && selectedKey !== ownKey)) {
         return 0;
     }
 

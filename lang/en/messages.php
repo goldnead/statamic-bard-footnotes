@@ -14,4 +14,12 @@ return [
     'url_hint' => 'A link must start with http:// or https://.',
     'apply_footnote' => 'Apply Footnote',
     'remove_footnote' => 'Remove Footnote',
+    'sources_heading' => 'Sources (:count)',
+    'cited_count' => ':count×',
+    'cited_times' => 'Cited :count times',
+    'open_link' => 'Open link in a new tab',
+    'jump' => 'Jump',
+    'jump_next' => 'Click again for the next place',
+    'edit' => 'Edit',
+    'edit_source' => 'Edit Source',
 ];

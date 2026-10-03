@@ -20,6 +20,10 @@ export default {
         existingSources: { type: Array, default: () => [] },
         ownKey: { type: String, default: null },
         showRemove: { type: Boolean, default: false },
+        // Opened from the source overview: the stack edits a source, every
+        // place citing it (the parent applies it so), and says so.
+        wholeSource: { type: Boolean, default: false },
+        title: { type: String, default: null },
     },
 
     emits: ['update:open', 'apply', 'remove'],
@@ -50,6 +54,7 @@ export default {
                 ownKey: this.ownKey,
                 selectedKey: this.selectedSource?.key ?? null,
                 sources: this.existingSources,
+                wholeSource: this.wholeSource,
             });
         },
         validUrl() {
@@ -129,7 +134,7 @@ export default {
 <template>
     <Stack
         :open="open"
-        :title="__('bard-footnotes::messages.button')"
+        :title="title || __('bard-footnotes::messages.button')"
         size="narrow"
         inset
         :wrap-slot="false"

@@ -4,6 +4,22 @@ All notable changes to `statamic-bard-footnotes` will be documented in this file
 
 ## 2.1.0 - unreleased
 
+### Sources under the field
+
+- A Bard field citing at least one source shows **Sources (N)** under the editor: number,
+  source text (↗ for links, new tab), citation count, **Jump** (selects the first citation and
+  scrolls to it; again for the next) and **Edit** (the footnote panel, applied to every place of
+  the source; picking another source merges into it). Live on every change, in number order;
+  no Edit in read-only fields. No remove: footnotes are removed in the text.
+- Mounted by a ProseMirror plugin view through TipTap's `VueRenderer` (same app context and
+  provides as a node view), right after the editor frame and before core's footer toolbar.
+  Rebuilt with the editor when Bard enters or leaves fullscreen, where it is a card of its own
+  under the editor card. Nothing is mounted in a field without footnotes.
+- New pure helpers in `footnotes.js`, tested against a real ProseMirror schema: `hasFootnotes`,
+  `nextCitation`, `isHttpUrl`; `reusedCount` learns `wholeSource`.
+- New strings (en/de): `sources_heading`, `cited_count`, `cited_times`, `open_link`, `jump`,
+  `jump_next`, `edit`, `edit_source`.
+
 ### Rendering a field in parts
 
 - `Footnotes::number()` is idempotent: a document whose every footnote with a source already
