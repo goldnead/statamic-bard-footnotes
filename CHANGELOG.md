@@ -2,6 +2,17 @@
 
 All notable changes to `statamic-bard-footnotes` will be documented in this file.
 
+## 2.1.0 - unreleased
+
+### Rendering a field in parts
+
+- `Footnotes::number()` is idempotent: a document whose every footnote with a source already
+  carries a `number` comes back unchanged (with its `first` flags). Number the whole field once,
+  split it, render each part through `Augmentor::convertToHtml()`: the numbers run across all
+  parts and `fnref-n` sits only on the first occurrence in the whole field. Before, the hook
+  restarted at 1 in every part. A partly numbered document is numbered anew. See "Rendering a
+  Bard field in parts" in the README.
+
 ## 2.0.0 - 2026-10-03
 
 ### Breaking: footnotes move into the text

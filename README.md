@@ -124,6 +124,29 @@ return Inertia::render('Article', [
 needs nothing from you — the augment hook numbers every footnote of the field and the node turns
 each into the superscript link.
 
+### Rendering a Bard field in parts
+
+The augment hook numbers whatever document it is given. If your app renders one Bard field in
+parts — say one `Augmentor::convertToHtml()` call per stretch of text between two sets — the hook
+runs once per part and every part would start again at 1. Number the whole document first, then
+split it:
+
+```php
+use Goldnead\BardFootnotes\Footnotes;
+use Statamic\Fieldtypes\Bard\Augmentor;
+
+$numbered = Footnotes::number($entry->content->raw()); // the whole field, once
+
+foreach ($stretchesBetweenSets($numbered) as $part) {
+    $html .= (new Augmentor($bardFieldtype))->convertToHtml($part);
+}
+```
+
+`Footnotes::number()` is idempotent: a document in which every footnote with a source already
+carries a number is returned unchanged, so the hook keeps the field-wide numbers in each part,
+and `id="fnref-n"` stays on the first occurrence in the whole field. A partly numbered document is
+numbered anew.
+
 ## CSS
 
 No frontend assets are published; two small rules cover the essentials:

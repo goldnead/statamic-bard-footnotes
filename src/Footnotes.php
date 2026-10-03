@@ -108,11 +108,18 @@ final class Footnotes
      * A document without footnote nodes passes through untouched — the
      * walk is a plain array traversal with nothing to write.
      *
+     * Idempotent: a document whose every footnote with a source already
+     * carries a `number` is returned as it is. An app rendering a field in
+     * parts (one Augmentor::convertToHtml() per stretch between sets) numbers
+     * the whole document first, then splits it; the hook, running once per
+     * part, must not restart the count at 1 or move `first` (the fnref
+     * target) into every part. A partly numbered document is numbered anew.
+     *
      * @param  mixed  $value  whatever the field holds; only arrays are walked
      */
     public static function number(mixed $value): mixed
     {
-        if (! is_array($value)) {
+        if (! is_array($value) || self::isNumbered($value)) {
             return $value;
         }
 
@@ -154,6 +161,25 @@ final class Footnotes
         $walk($value);
 
         return $value;
+    }
+
+    /**
+     * Does every footnote with a source carry a number already? (A document
+     * without such footnotes counts as numbered: there is nothing to write.)
+     *
+     * @param  list<mixed>  $value
+     */
+    private static function isNumbered(array $value): bool
+    {
+        $numbered = true;
+
+        self::walk($value, function (array $attrs) use (&$numbered): void {
+            if (! self::isEmpty($attrs['text'] ?? null, $attrs['url'] ?? null) && ! is_int($attrs['number'] ?? null)) {
+                $numbered = false;
+            }
+        });
+
+        return $numbered;
     }
 
     /**
