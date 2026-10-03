@@ -19,21 +19,43 @@ use Statamic\Fields\Value;
 final class Footnotes
 {
     /**
+     * "Whitespace" for keys: \s, every Unicode separator (\p{Z}, NBSP
+     * included), the BOM (U+FEFF) and NEL (U+0085). The same set as the JS
+     * twin; tests/fixtures/keys.json pins both to the same answers.
+     */
+    private const SPACE = '[\s\p{Z}\x{FEFF}\x{85}]';
+
+    /**
      * The key that decides whether two footnote nodes are the same source:
-     * the trimmed URL when one exists, otherwise the trimmed text with
-     * whitespace collapsed, case-insensitive.
+     * the trimmed URL when one exists, otherwise the text with whitespace
+     * trimmed at the edges and collapsed inside, case-insensitive. An empty
+     * key means the footnote has no source at all (see isEmpty()).
      */
     public static function key(?string $text, ?string $url): string
     {
-        $url = trim((string) $url);
+        $url = self::trimSpace((string) $url);
 
         if ($url !== '') {
             return $url;
         }
 
-        $text = preg_replace('/[\p{Z}\s]+/u', ' ', trim((string) $text));
+        $text = preg_replace('/'.self::SPACE.'+/u', ' ', (string) $text);
 
-        return mb_strtolower($text ?? '');
+        return mb_strtolower(self::trimSpace($text ?? ''));
+    }
+
+    /**
+     * A footnote with neither text nor URL has no source: it is not
+     * numbered, not listed, not rendered.
+     */
+    public static function isEmpty(?string $text, ?string $url): bool
+    {
+        return self::key($text, $url) === '';
+    }
+
+    private static function trimSpace(string $value): string
+    {
+        return preg_replace('/^'.self::SPACE.'+|'.self::SPACE.'+$/u', '', $value) ?? '';
     }
 
     /**
@@ -58,16 +80,16 @@ final class Footnotes
         self::walk($value, function (array $attrs) use (&$sources, &$keys): void {
             $key = self::key($attrs['text'] ?? null, $attrs['url'] ?? null);
 
-            if (isset($keys[$key])) {
+            if ($key === '' || isset($keys[$key])) {
                 return;
             }
 
             $keys[$key] = true;
-            $url = trim((string) ($attrs['url'] ?? ''));
+            $url = self::trimSpace((string) ($attrs['url'] ?? ''));
 
             $sources[] = [
                 'number' => count($sources) + 1,
-                'text' => trim((string) ($attrs['text'] ?? '')),
+                'text' => self::trimSpace((string) ($attrs['text'] ?? '')),
                 // Nothing from a content field reaches an href unvetted: a
                 // link only survives as http(s), anything else is text.
                 'url' => $url !== '' && preg_match('#^https?://#i', $url) === 1 ? $url : null,
@@ -104,17 +126,21 @@ final class Footnotes
 
                 if (($node['type'] ?? null) === 'footnote') {
                     $key = self::key($node['attrs']['text'] ?? null, $node['attrs']['url'] ?? null);
-                    $first = ! isset($numbers[$key]);
 
-                    if ($first) {
-                        $numbers[$key] = count($numbers) + 1;
+                    // No source, no number: the node renders nothing.
+                    if ($key !== '') {
+                        $first = ! isset($numbers[$key]);
+
+                        if ($first) {
+                            $numbers[$key] = count($numbers) + 1;
+                        }
+
+                        $node['attrs'] = [
+                            ...($node['attrs'] ?? []),
+                            'number' => $numbers[$key],
+                            'first' => $first,
+                        ];
                     }
-
-                    $node['attrs'] = [
-                        ...($node['attrs'] ?? []),
-                        'number' => $numbers[$key],
-                        'first' => $first,
-                    ];
                 }
 
                 // Only `content`: a set's own field values are a separate
@@ -155,9 +181,10 @@ final class Footnotes
 
     /**
      * A Bard value to its raw ProseMirror document: Value → raw, Collection
-     * → items, array → itself, everything else → null.
+     * → items, array → itself, everything else is returned as it is (not a
+     * document: callers check with is_array()).
      */
-    private static function raw(mixed $value): mixed
+    public static function raw(mixed $value): mixed
     {
         if ($value instanceof Value) {
             $value = $value->raw();

@@ -4,6 +4,7 @@ namespace Goldnead\BardFootnotes\Tests\Unit;
 
 use Goldnead\BardFootnotes\ServiceProvider;
 use Goldnead\BardFootnotes\Tests\Concerns\RendersAntlers;
+use Illuminate\Support\Facades\Log;
 use Statamic\Fields\Field;
 use Statamic\Fields\Value;
 use Statamic\Fieldtypes\Bard;
@@ -59,6 +60,44 @@ class TagTest extends AddonTestCase
         $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $out);
         $this->assertStringNotContainsString('<script>', $out);
         $this->assertStringNotContainsString('href="javascript:', $out);
+    }
+
+    public function test_a_wrong_field_handle_is_logged_in_debug_mode(): void
+    {
+        config(['app.debug' => true]);
+        Log::shouldReceive('warning')->once()->withArgs(
+            fn (string $message): bool => str_contains($message, 'nope'),
+        );
+
+        $this->assertSame('', $this->render('{{ footnotes field="nope" }}', ['content' => $this->content()]));
+    }
+
+    public function test_a_field_that_is_not_bard_is_logged_in_debug_mode(): void
+    {
+        config(['app.debug' => true]);
+        Log::shouldReceive('warning')->once()->withArgs(
+            fn (string $message): bool => str_contains($message, 'title'),
+        );
+
+        $this->assertSame('', $this->render('{{ footnotes field="title" }}', ['title' => 'Just a string']));
+    }
+
+    public function test_a_wrong_field_handle_stays_silent_without_debug_mode(): void
+    {
+        config(['app.debug' => false]);
+        Log::shouldReceive('warning')->never();
+
+        $this->assertSame('', $this->render('{{ footnotes field="nope" }}', ['content' => $this->content()]));
+    }
+
+    public function test_a_bard_field_without_footnotes_is_not_logged(): void
+    {
+        config(['app.debug' => true]);
+        Log::shouldReceive('warning')->never();
+
+        $plain = new Value([['type' => 'paragraph']], 'content', new Bard);
+
+        $this->assertSame('', $this->render('{{ footnotes field="content" }}', ['content' => $plain]));
     }
 
     public function test_the_single_tag_without_footnotes_renders_nothing(): void

@@ -2,6 +2,7 @@
 
 namespace Goldnead\BardFootnotes\Bard;
 
+use Goldnead\BardFootnotes\Footnotes;
 use Tiptap\Core\Node;
 
 /**
@@ -43,7 +44,9 @@ class FootnoteNode extends Node
     {
         $number = $node->attrs->number ?? null;
 
-        if (! $number) {
+        // A footnote without a source (no text, no url) is never rendered,
+        // whatever number it might carry.
+        if (! $number || Footnotes::isEmpty($node->attrs->text ?? null, $node->attrs->url ?? null)) {
             return ['content' => ''];
         }
 

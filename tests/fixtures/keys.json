@@ -1,0 +1,50 @@
+{
+    "_comment": "Shared by tests/Unit/FootnotesTest.php and tests/js/footnotes.test.mjs: the PHP and JS source keys must agree on every row. Whitespace-like = \\s, \\p{Z}, U+FEFF, U+0085.",
+    "keys": [
+        { "name": "plain text is lowercased", "text": "Smith, p. 12", "url": null, "key": "smith, p. 12" },
+        { "name": "ascii whitespace collapses", "text": "  Example   Source\t\n x ", "url": null, "key": "example source x" },
+        { "name": "NBSP at the edges", "text": " Smith ", "url": null, "key": "smith" },
+        { "name": "BOM / zero width no-break space at the edges", "text": "﻿Smith﻿", "url": null, "key": "smith" },
+        { "name": "U+0085 next line at the edges", "text": "\u0085Smith\u0085", "url": null, "key": "smith" },
+        { "name": "mixed unicode whitespace inside collapses to one space", "text": "Smith \u0085 ﻿p.　12", "url": null, "key": "smith p. 12" },
+        { "name": "line and paragraph separators", "text": "a b c", "url": null, "key": "a b c" },
+        { "name": "multibyte lowercase", "text": "ÄRZTE Gesucht", "url": null, "key": "ärzte gesucht" },
+        { "name": "empty text, url null", "text": "", "url": null, "key": "" },
+        { "name": "empty text, url empty string", "text": "", "url": "", "key": "" },
+        { "name": "text null, url null", "text": null, "url": null, "key": "" },
+        { "name": "whitespace-only text", "text": "  ﻿\u0085", "url": "", "key": "" },
+        { "name": "url wins over text and keeps its case", "text": "Ignored", "url": " https://example.com/A ", "key": "https://example.com/A" },
+        { "name": "url with unicode whitespace at the edges", "text": "Ignored", "url": " ﻿https://example.com/a\u0085 ", "key": "https://example.com/a" },
+        { "name": "whitespace-only url falls back to the text", "text": "Jones", "url": " ﻿", "key": "jones" }
+    ],
+    "numbering": [
+        {
+            "name": "a footnote with neither text nor url does not count",
+            "nodes": [
+                { "text": "A", "url": null },
+                { "text": "", "url": null },
+                { "text": "B", "url": null },
+                { "text": " ", "url": "" },
+                { "text": " a ", "url": null }
+            ],
+            "numbers": [1, null, 2, null, 1]
+        },
+        {
+            "name": "only empty footnotes: nothing is numbered",
+            "nodes": [
+                { "text": "", "url": null },
+                { "text": null, "url": " " }
+            ],
+            "numbers": [null, null]
+        },
+        {
+            "name": "unicode whitespace variants are one source",
+            "nodes": [
+                { "text": "Smith p. 12", "url": null },
+                { "text": " smith  P. 12﻿", "url": null },
+                { "text": "Other", "url": null }
+            ],
+            "numbers": [1, 1, 2]
+        }
+    ]
+}

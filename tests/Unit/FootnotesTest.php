@@ -146,6 +146,49 @@ class FootnotesTest extends AddonTestCase
         $this->assertSame('inner', $numbered[0]['attrs']['values']['nested'][0]['content'][0]['attrs']['text']);
     }
 
+    /*
+     * The shared fixture (tests/fixtures/keys.json): the JS twin reads the
+     * same rows, so PHP and JS keys cannot drift apart unnoticed.
+     */
+
+    public function test_key_agrees_with_the_shared_fixture(): void
+    {
+        foreach ($this->fixture()['keys'] as $row) {
+            $this->assertSame($row['key'], Footnotes::key($row['text'], $row['url']), $row['name']);
+        }
+    }
+
+    public function test_numbering_agrees_with_the_shared_fixture(): void
+    {
+        foreach ($this->fixture()['numbering'] as $row) {
+            $doc = [['type' => 'paragraph', 'content' => array_map(
+                fn (array $node): array => ['type' => 'footnote', 'attrs' => ['text' => $node['text'], 'url' => $node['url']]],
+                $row['nodes'],
+            )]];
+
+            $numbered = Footnotes::number($doc);
+            $numbers = array_map(
+                fn (array $footnote): ?int => $footnote['attrs']['number'] ?? null,
+                $this->footnotesOf($numbered),
+            );
+
+            $this->assertSame($row['numbers'], $numbers, $row['name']);
+
+            $expected = array_values(array_unique(array_filter($row['numbers'])));
+            $this->assertSame(
+                $expected,
+                array_column(Footnotes::sources($doc), 'number'),
+                $row['name'].' (sources)',
+            );
+        }
+    }
+
+    /** @return array{keys: list<array<string, mixed>>, numbering: list<array<string, mixed>>} */
+    private function fixture(): array
+    {
+        return json_decode((string) file_get_contents(__DIR__.'/../fixtures/keys.json'), true, flags: JSON_THROW_ON_ERROR);
+    }
+
     public function test_a_document_without_footnotes_passes_through_unchanged(): void
     {
         $doc = [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'plain']]]];

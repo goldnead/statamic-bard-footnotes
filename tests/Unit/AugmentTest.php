@@ -46,6 +46,21 @@ class AugmentTest extends AddonTestCase
         $this->assertStringNotContainsString('javascript:', $html);
     }
 
+    public function test_a_footnote_without_text_and_url_renders_nothing_and_takes_no_number(): void
+    {
+        $html = $this->augment([['type' => 'paragraph', 'content' => [
+            ['type' => 'text', 'text' => 'a'],
+            ['type' => 'footnote', 'attrs' => ['text' => '', 'url' => null]],
+            ['type' => 'footnote', 'attrs' => ['text' => "\u{00A0}", 'url' => '']],
+            ['type' => 'footnote', 'attrs' => ['text' => 'Real', 'url' => null]],
+        ]]]);
+
+        $this->assertSame(
+            '<p>a<sup class="footnote-ref"><a href="#fn-1" id="fnref-1" aria-label="Footnote 1">1</a></sup></p>',
+            $html,
+        );
+    }
+
     public function test_bard_without_footnotes_renders_unchanged(): void
     {
         $this->assertSame(

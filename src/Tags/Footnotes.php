@@ -7,6 +7,7 @@
 namespace Goldnead\BardFootnotes\Tags;
 
 use Goldnead\BardFootnotes\Footnotes as Footnote;
+use Illuminate\Support\Facades\Log;
 use Statamic\Tags\Tags;
 
 class Footnotes extends Tags
@@ -49,7 +50,18 @@ class Footnotes extends Tags
     private function rawContent(): mixed
     {
         $field = $this->params->get('field');
+        $raw = $field === null ? null : Footnote::raw($this->context->get($field));
 
-        return $field === null ? null : $this->context->get($field);
+        // A silent empty list is the right output for a page, a puzzle for
+        // the developer: in debug mode one line says what was not found.
+        if (! is_array($raw) && config('app.debug')) {
+            Log::warning(sprintf(
+                'bard-footnotes: {{ footnotes field="%s" }} found no Bard value in the current context. '
+                .'`field` is the handle of a Bard variable available where the tag is used.',
+                is_string($field) ? $field : '',
+            ));
+        }
+
+        return $raw;
     }
 }
