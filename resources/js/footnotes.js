@@ -153,6 +153,74 @@ export function nextCitation(doc, key, from) {
 }
 
 /**
+ * While the overview's Edit Source panel is open, every footnote citing
+ * that source is marked in the editor (class `footnote-cited`, which
+ * Vue node views receive on their NodeViewWrapper). The plugin keeps the
+ * key; the marks are derived from the document on every change, so a
+ * footnote added or edited meanwhile follows along.
+ *
+ * ProseMirror's classes come in as arguments: in the CP from TipTap's
+ * bundled copies, in the tests from the packages.
+ */
+const HIGHLIGHT_META = 'footnoteCitationHighlight';
+const HIGHLIGHT_CLASS = 'footnote-cited';
+
+export function citationHighlightPlugin({ Plugin, Decoration, DecorationSet }) {
+    const decorate = (doc, key) =>
+        key
+            ? DecorationSet.create(doc, positionsCiting(doc, key).map((pos) => Decoration.node(pos, pos + 1, { class: HIGHLIGHT_CLASS })))
+            : DecorationSet.empty;
+
+    const plugin = new Plugin({
+        state: {
+            init: () => ({ key: null, decorations: DecorationSet.empty }),
+            apply(tr, value, _old, state) {
+                const meta = tr.getMeta(HIGHLIGHT_META);
+                const key = meta === undefined ? value.key : meta;
+
+                if (meta === undefined && !tr.docChanged) {
+                    return value;
+                }
+
+                return { key, decorations: decorate(state.doc, key) };
+            },
+        },
+        props: {
+            decorations(state) {
+                return plugin.getState(state).decorations;
+            },
+        },
+    });
+
+    citationHighlightPlugin.instances.add(plugin);
+
+    return plugin;
+}
+
+citationHighlightPlugin.instances = new WeakSet();
+
+/** The highlight decorations of a state (for tests and the node view). */
+citationHighlightPlugin.decorationsOf = (state) => {
+    for (const plugin of state.plugins) {
+        if (citationHighlightPlugin.instances.has(plugin)) {
+            return plugin.getState(state).decorations;
+        }
+    }
+
+    return null;
+};
+
+/**
+ * The command switching the highlight: a source key, or null for off. Not
+ * an edit, so nothing for undo.
+ */
+export const setCitationHighlight = (key) => ({ tr }) => {
+    tr.setMeta(HIGHLIGHT_META, key ?? null).setMeta('addToHistory', false);
+
+    return true;
+};
+
+/**
  * Only http(s) links become clickable in the CP — the same rule the PHP
  * side applies before a url reaches an href.
  */

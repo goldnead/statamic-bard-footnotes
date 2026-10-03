@@ -67,11 +67,12 @@ the field. It is where the sources of the text are kept in order:
 - one row per source, in number order, with the same live number the text shows,
 - the source text (a link source shows a small ↗ that opens it in a new tab),
 - how often it is cited (`2×`),
-- **Edit** opens the same panel as clicking a footnote, but for the whole source: Apply changes
-  **every** place citing it. Picking another source in the panel's select merges this source into
-  that one — all its places now cite the other source.
-- **Jump** selects the first place in the text that cites the source and scrolls to it; with
-  several places, clicking again moves on to the next one.
+- **Edit** (pencil) opens the panel "Edit Source n" for exactly this source: text and link,
+  and Apply Source changes **every** place citing it. While the panel is open, those places are
+  highlighted in the text. There is no source select here — the panel never re-points or merges.
+- **Go to citation** (target) selects the first place in the text that cites the source and
+  scrolls to it; with several places the button reads "Next citation" and each click moves on to
+  the next one.
 
 The list updates with every change in the editor and disappears when the last footnote goes. It
 shows in every Bard field that holds footnotes, with or without the toolbar button. A read-only

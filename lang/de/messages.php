@@ -18,8 +18,9 @@ return [
     'cited_count' => ':count×',
     'cited_times' => ':count-mal zitiert',
     'open_link' => 'Link in neuem Tab öffnen',
-    'jump' => 'Zur Stelle',
-    'jump_next' => 'Erneut klicken für die nächste Stelle',
+    'go_to_citation' => 'Zur Textstelle',
+    'next_citation' => 'Nächste Textstelle',
     'edit' => 'Bearbeiten',
-    'edit_source' => 'Quelle bearbeiten',
+    'edit_source' => 'Quelle :number bearbeiten',
+    'apply_source' => 'Quelle anwenden',
 ];

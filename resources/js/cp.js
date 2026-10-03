@@ -11,7 +11,14 @@
 import FootnoteNodeView from './components/FootnoteNodeView.vue';
 import FootnoteSources from './components/FootnoteSources.vue';
 import FootnoteToolbarButton from './components/FootnoteToolbarButton.vue';
-import { footnoteRenderSpec, insertFootnoteAtEnd, setFootnoteAttrs, updateFootnoteSource } from './footnotes.js';
+import {
+    citationHighlightPlugin,
+    footnoteRenderSpec,
+    insertFootnoteAtEnd,
+    setCitationHighlight,
+    setFootnoteAttrs,
+    updateFootnoteSource,
+} from './footnotes.js';
 import { sourcesPanelView } from './sourcesPanel.js';
 
 Statamic.booting(() => {
@@ -20,6 +27,7 @@ Statamic.booting(() => {
     Statamic.$bard.addExtension(({ bard, tiptap }) => {
         const { Extension, Node } = tiptap.core;
         const { Plugin, PluginKey } = tiptap.pm.state;
+        const { Decoration, DecorationSet } = tiptap.pm.view;
 
         // The source overview under the editor frame (see sourcesPanel.js):
         // a plugin view per editor, so it follows Bard's editor through
@@ -43,7 +51,12 @@ Statamic.booting(() => {
                                 component: FootnoteSources,
                             }),
                     }),
+                    citationHighlightPlugin({ Plugin, Decoration, DecorationSet }),
                 ];
+            },
+
+            addCommands() {
+                return { setCitationHighlight };
             },
         });
 

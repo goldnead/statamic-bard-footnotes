@@ -5,10 +5,11 @@ import { distinctSources, isHttpUrl, nextCitation } from '../footnotes.js';
 
 /**
  * The source overview under the editor: every source of this field, in
- * number order, with how often it is cited. Edit opens the same stack the
- * footnote itself opens, but for the SOURCE — Apply changes every place
- * citing it. Jump selects the first citation in the text; clicking again
- * moves on to the next one.
+ * number order, with how often it is cited. Edit opens the footnote stack
+ * for exactly that SOURCE (no select, no merging) — Apply changes every
+ * place citing it, and while it is open those places are marked in the
+ * text. "Go to citation" selects the first citation; clicking again moves
+ * on to the next one.
  *
  * Rendered by sourcesPanel.js through TipTap's VueRenderer, so it shares
  * the app context and the provides of Bard's EditorContent (the injected
@@ -36,6 +37,13 @@ export default {
         },
     },
 
+    watch: {
+        // Every place of the edited source is marked while the stack is open.
+        showing(isOpen) {
+            this.editor.commands.setCitationHighlight(isOpen ? this.editing?.key : null);
+        },
+    },
+
     mounted() {
         this.refresh();
         this.editor.on('update', this.refresh);
@@ -43,6 +51,10 @@ export default {
 
     beforeUnmount() {
         this.editor.off('update', this.refresh);
+
+        if (this.showing && !this.editor.isDestroyed) {
+            this.editor.commands.setCitationHighlight(null);
+        }
     },
 
     methods: {
@@ -57,18 +69,21 @@ export default {
         link(source) {
             return isHttpUrl(source.url) ? source.url.trim() : null;
         },
+        goToLabel(source) {
+            return source.count > 1
+                ? __('bard-footnotes::messages.next_citation')
+                : __('bard-footnotes::messages.go_to_citation');
+        },
         edit(source) {
             this.editing = source;
             this.showing = true;
         },
         apply({ text, url }) {
-            // Whatever the select shows: the whole source changes. Picking
-            // another source therefore merges this one into it.
             if (this.editing) {
                 this.editor.commands.updateFootnoteSource(this.editing.key, { text, url });
             }
         },
-        jump(source) {
+        goTo(source) {
             const { state, view } = this.editor;
             const pos = nextCitation(state.doc, source.key, state.selection.from);
 
@@ -97,7 +112,7 @@ export default {
         v-if="sources.length"
         class="bard-footnotes-sources"
     >
-        <div class="mb-1 font-medium text-gray-900 dark:text-gray-300">
+        <div class="mb-1">
             {{ __('bard-footnotes::messages.sources_heading', { count: sources.length }) }}
         </div>
         <ol>
@@ -132,17 +147,22 @@ export default {
                     :title="__('bard-footnotes::messages.cited_times', { count: source.count })"
                 >{{ __('bard-footnotes::messages.cited_count', { count: source.count }) }}</span>
                 <Button
+                    icon="target-aim"
+                    icon-only
                     variant="ghost"
                     size="xs"
-                    :text="__('bard-footnotes::messages.jump')"
-                    v-tooltip="source.count > 1 ? __('bard-footnotes::messages.jump_next') : null"
-                    @click="jump(source)"
+                    :aria-label="goToLabel(source)"
+                    v-tooltip="goToLabel(source)"
+                    @click="goTo(source)"
                 />
                 <Button
                     v-if="!readOnly"
+                    icon="pencil"
+                    icon-only
                     variant="ghost"
                     size="xs"
-                    :text="__('bard-footnotes::messages.edit')"
+                    :aria-label="__('bard-footnotes::messages.edit')"
+                    v-tooltip="__('bard-footnotes::messages.edit')"
                     @click="edit(source)"
                 />
             </li>
@@ -150,7 +170,7 @@ export default {
         <FootnotePopover
             v-if="!readOnly"
             v-model:open="showing"
-            :title="__('bard-footnotes::messages.edit_source')"
+            :title="__('bard-footnotes::messages.edit_source', { number: editing?.number ?? '' })"
             :text="editing?.text ?? ''"
             :url="editing?.url ?? null"
             :existing-sources="sources"

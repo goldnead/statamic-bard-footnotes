@@ -18,19 +18,22 @@
     line-height: 0;
 }
 
-.bard-content sup.footnote-ref.is-selected {
+.bard-content sup.footnote-ref.is-selected,
+.bard-content .footnote-cited sup.footnote-ref {
     @apply bg-blue-400/25 decoration-current;
 }
 
 /*
  * The source overview under the editor frame (FootnoteSources.vue, placed
- * by sourcesPanel.js inside a wrapper div). The same strip as core's
- * .bard-footer-toolbar (reading time): border on top, background, text-xs,
- * 8px 12px — on the themeable content background rather than plain white.
+ * by sourcesPanel.js inside a wrapper div). Exactly the strip of core's
+ * .bard-footer-toolbar (bard.css, reading time): same tokens — bg-white /
+ * dark:bg-gray-900, text-gray-700 / dark:text-gray-400 — border on top,
+ * text-xs, 8px 12px. addon-lint flags bg-white and text-gray-700 as not
+ * themeable; matching the neighbouring core strip wins here, on purpose.
  * Unlayered, so it wins over core's @layer ui rules.
  */
 .bard-footnotes-sources {
-    @apply rounded-b-lg border-t bg-content-bg text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400;
+    @apply rounded-b-lg border-t bg-white text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400;
     padding: 8px 12px;
 }
 

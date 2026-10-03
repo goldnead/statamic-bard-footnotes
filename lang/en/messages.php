@@ -18,8 +18,9 @@ return [
     'cited_count' => ':count×',
     'cited_times' => 'Cited :count times',
     'open_link' => 'Open link in a new tab',
-    'jump' => 'Jump',
-    'jump_next' => 'Click again for the next place',
+    'go_to_citation' => 'Go to citation',
+    'next_citation' => 'Next citation',
     'edit' => 'Edit',
-    'edit_source' => 'Edit Source',
+    'edit_source' => 'Edit Source :number',
+    'apply_source' => 'Apply Source',
 ];

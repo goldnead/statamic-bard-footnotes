@@ -2,10 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Schema } from 'prosemirror-model';
-import { EditorState, NodeSelection, TextSelection } from 'prosemirror-state';
+import { EditorState, NodeSelection, Plugin, TextSelection } from 'prosemirror-state';
+import { Decoration, DecorationSet } from 'prosemirror-view';
 
 import {
+    citationHighlightPlugin,
     collectFootnotes,
+    positionsCiting,
+    setCitationHighlight,
     distinctSources,
     hasFootnotes,
     isHttpUrl,
@@ -102,19 +106,18 @@ test('nextCitation: a source no longer cited has no target', () => {
     assert.equal(nextCitation(stateOf(p(fn('Smith'))).doc, 'nobody', 0), null);
 });
 
-test('Edit from the overview changes every place of the source; picking another source merges them', () => {
+test('Edit Source from the overview changes every place of that source, and only those', () => {
     const state = stateOf(p(fn('Smith'), fn('Jones')), p(fn('smith')));
     const smithKey = sourceKey({ text: 'Smith' });
 
-    // the overview always applies to the whole source: both Smiths become Jones
     const transactions = [];
-    updateFootnoteSource(smithKey, { text: 'Jones', url: null })({ state, dispatch: (tr) => transactions.push(tr) });
+    updateFootnoteSource(smithKey, { text: 'Smith, p. 13', url: null })({ state, dispatch: (tr) => transactions.push(tr) });
 
     assert.equal(transactions.length, 1);
-    const merged = state.apply(transactions[0]);
+    const next = state.apply(transactions[0]);
 
-    assert.deepEqual(collectFootnotes(merged.doc).map((f) => f.text), ['Jones', 'Jones', 'Jones']);
-    assert.deepEqual(distinctSources(merged.doc).map((s) => [s.number, s.text, s.count]), [[1, 'Jones', 3]]);
+    assert.deepEqual(collectFootnotes(next.doc).map((f) => f.text), ['Smith, p. 13', 'Jones', 'Smith, p. 13']);
+    assert.deepEqual(distinctSources(next.doc).map((s) => [s.number, s.text, s.count]), [[1, 'Smith, p. 13', 2], [2, 'Jones', 1]]);
 });
 
 test('reusedCount with wholeSource: the hint stays while another source is picked', () => {
@@ -130,6 +133,45 @@ test('reusedCount with wholeSource: the hint stays while another source is picke
     assert.equal(reusedCount({ ownKey: jonesKey, selectedKey: jonesKey, sources, wholeSource: true }), 0);
     // without the flag, unchanged
     assert.equal(reusedCount({ ownKey: smithKey, selectedKey: jonesKey, sources }), 0);
+});
+
+/* The Edit Source panel marks every place of the source while it is open. */
+
+const highlightPlugin = () => citationHighlightPlugin({ Plugin, Decoration, DecorationSet });
+
+const highlighted = (state) =>
+    citationHighlightPlugin.decorationsOf(state)
+        .find()
+        .map((d) => [d.from, d.type.attrs.class]);
+
+test('citation highlight: off by default, marks every citation of the key, off again with null', () => {
+    let state = EditorState.create({
+        schema,
+        doc: schema.nodes.doc.create(null, [p(t('a'), fn('Smith'), fn('Jones')), p(fn('smith'))]),
+        plugins: [highlightPlugin()],
+    });
+    const smithKey = sourceKey({ text: 'Smith' });
+    const smith = positionsCiting(state.doc, smithKey);
+
+    assert.deepEqual(highlighted(state), []);
+
+    const on = state.tr;
+    setCitationHighlight(smithKey)({ tr: on });
+    state = state.apply(on);
+
+    assert.deepEqual(highlighted(state), smith.map((pos) => [pos, 'footnote-cited']));
+    // a highlight is not an edit: nothing for undo
+    assert.equal(on.getMeta('addToHistory'), false);
+
+    // follows the document: a footnote added for the same source lights up too
+    state = state.apply(state.tr.insert(1, fn('SMITH')));
+    assert.equal(highlighted(state).length, 3);
+
+    const off = state.tr;
+    setCitationHighlight(null)({ tr: off });
+    state = state.apply(off);
+
+    assert.deepEqual(highlighted(state), []);
 });
 
 test('isHttpUrl: only http(s) links are clickable', () => {

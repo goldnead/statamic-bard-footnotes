@@ -6,19 +6,22 @@ All notable changes to `statamic-bard-footnotes` will be documented in this file
 
 ### Sources under the field
 
-- A Bard field citing at least one source shows **Sources (N)** under the editor: number,
-  source text (↗ for links, new tab), citation count, **Jump** (selects the first citation and
-  scrolls to it; again for the next) and **Edit** (the footnote panel, applied to every place of
-  the source; picking another source merges into it). Live on every change, in number order;
-  no Edit in read-only fields. No remove: footnotes are removed in the text.
+- A Bard field citing at least one source shows **Sources (N)** under the editor, styled like
+  core's footer toolbar: number, source text (↗ for links, new tab), citation count, and two
+  icon buttons — **Go to citation** / **Next citation** (selects the first citation and scrolls
+  to it; again for the next) and **Edit**. Edit opens "Edit Source n": no source select, only
+  text and link, Apply Source changes every place of that source (nothing is merged), and those
+  places are highlighted in the text while the panel is open. Live on every change, in number
+  order; no Edit in read-only fields. No remove: footnotes are removed in the text.
 - Mounted by a ProseMirror plugin view through TipTap's `VueRenderer` (same app context and
   provides as a node view), right after the editor frame and before core's footer toolbar.
   Rebuilt with the editor when Bard enters or leaves fullscreen, where it is a card of its own
   under the editor card. Nothing is mounted in a field without footnotes.
 - New pure helpers in `footnotes.js`, tested against a real ProseMirror schema: `hasFootnotes`,
-  `nextCitation`, `isHttpUrl`; `reusedCount` learns `wholeSource`.
-- New strings (en/de): `sources_heading`, `cited_count`, `cited_times`, `open_link`, `jump`,
-  `jump_next`, `edit`, `edit_source`.
+  `nextCitation`, `isHttpUrl`, the `citationHighlightPlugin` with its `setCitationHighlight`
+  command (not recorded for undo); `reusedCount` learns `wholeSource`.
+- New strings (en/de): `sources_heading`, `cited_count`, `cited_times`, `open_link`,
+  `go_to_citation`, `next_citation`, `edit`, `edit_source`, `apply_source`.
 
 ### Rendering a field in parts
 

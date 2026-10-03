@@ -20,8 +20,9 @@ export default {
         existingSources: { type: Array, default: () => [] },
         ownKey: { type: String, default: null },
         showRemove: { type: Boolean, default: false },
-        // Opened from the source overview: the stack edits a source, every
-        // place citing it (the parent applies it so), and says so.
+        // Opened from the source overview: the stack edits one source,
+        // every place citing it (the parent applies it so), and says so.
+        // No select then: nothing can be re-pointed or merged from here.
         wholeSource: { type: Boolean, default: false },
         title: { type: String, default: null },
     },
@@ -145,8 +146,15 @@ export default {
         </template>
 
         <StackContent class="space-y-5">
+            <!-- Editing a whole source (from the overview): no select — this
+                 panel edits exactly that source, it never re-points or
+                 merges. The hint is its only line above the fields. -->
+            <Description
+                v-if="wholeSource && reused > 0"
+                :text="__('bard-footnotes::messages.reused_source', { count: reused })"
+            />
             <Field
-                v-if="existingSources.length"
+                v-if="!wholeSource && existingSources.length"
                 :label="__('bard-footnotes::messages.source')"
             >
                 <Select
@@ -196,7 +204,7 @@ export default {
                 />
                 <Button
                     variant="primary"
-                    :text="__('bard-footnotes::messages.apply_footnote')"
+                    :text="wholeSource ? __('bard-footnotes::messages.apply_source') : __('bard-footnotes::messages.apply_footnote')"
                     :disabled="!canApply"
                     @click="apply"
                 />
