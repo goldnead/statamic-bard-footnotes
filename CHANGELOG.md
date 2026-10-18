@@ -4,8 +4,6 @@ All notable changes to `statamic-bard-footnotes` will be documented in this file
 
 ## 2.1.1 - 2026-10-18
 
-Patch-level change (no tag yet).
-
 ### Multi-line source field
 
 - The source text field in the footnote form is now a multi-line textarea (core's `Textarea`,
