@@ -2,7 +2,7 @@
 
 All notable changes to `statamic-bard-footnotes` will be documented in this file.
 
-## Unreleased
+## 2.1.1 - 2026-10-18
 
 Patch-level change (no tag yet).
 
