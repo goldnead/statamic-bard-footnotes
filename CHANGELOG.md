@@ -2,6 +2,16 @@
 
 All notable changes to `statamic-bard-footnotes` will be documented in this file.
 
+## Unreleased
+
+Patch-level change (no tag yet).
+
+### Multi-line source field
+
+- The source text field in the footnote form is now a multi-line textarea (core's `Textarea`,
+  auto-growing with its text) instead of a single-line input. **Enter** still applies the
+  footnote; **Shift+Enter** inserts a line break. Escape and Cancel behave as before.
+
 ## 2.1.0 - 2026-10-03
 
 ### Sources under the field

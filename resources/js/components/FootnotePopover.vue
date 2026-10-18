@@ -1,5 +1,5 @@
 <script>
-import { Button, Description, Field, Input, Select, Stack, StackContent, StackFooter } from '@statamic/cms/ui';
+import { Button, Description, Field, Input, Select, Stack, StackContent, StackFooter, Textarea } from '@statamic/cms/ui';
 import { reusedCount, sourceKey } from '../footnotes.js';
 
 /**
@@ -11,7 +11,7 @@ import { reusedCount, sourceKey } from '../footnotes.js';
  * the toolbar, which inserts a new one).
  */
 export default {
-    components: { Button, Description, Field, Input, Select, Stack, StackContent, StackFooter },
+    components: { Button, Description, Field, Input, Select, Stack, StackContent, StackFooter, Textarea },
 
     props: {
         open: { type: Boolean, default: false },
@@ -104,7 +104,8 @@ export default {
         // a beat before the input can take the focus.
         focusSourceText() {
             this.$nextTick(() => {
-                setTimeout(() => this.$refs.sourceText?.focus(), 50);
+                // Textarea's root is a wrapper div; the focusable element is the inner textarea.
+                setTimeout(() => this.$refs.sourceText?.$el?.querySelector('textarea')?.focus(), 50);
             });
         },
         apply() {
@@ -170,13 +171,16 @@ export default {
                     :text="__('bard-footnotes::messages.reused_source', { count: reused })"
                 />
             </Field>
-            <Input
+            <!-- Multi-line: the field grows with its text. Plain Enter applies
+                 (.exact); Shift+Enter falls through and inserts a line break. -->
+            <Textarea
                 ref="sourceText"
                 v-model="sourceText"
-                type="text"
+                elastic
+                rows="1"
                 autofocus
                 :placeholder="__('bard-footnotes::messages.source_placeholder')"
-                @keydown.enter.prevent="apply"
+                @keydown.enter.exact.prevent="apply"
             />
             <Input
                 v-model="sourceUrl"
