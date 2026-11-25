@@ -74,6 +74,45 @@ class FootnotesTest extends AddonTestCase
         $this->assertSame([['number' => 1, 'text' => 'Nope', 'url' => null]], $sources);
     }
 
+    public function test_a_url_without_http_and_without_text_is_no_source(): void
+    {
+        // Only http(s) survives as a link: these URLs are no source at all,
+        // so the node gets no number and is not listed.
+        $doc = [['type' => 'paragraph', 'content' => [
+            ['type' => 'footnote', 'attrs' => ['text' => '', 'url' => 'mailto:a@b.de']],
+            ['type' => 'footnote', 'attrs' => ['text' => '', 'url' => 'doi:10.1/x']],
+            ['type' => 'footnote', 'attrs' => ['text' => '', 'url' => 'www.beispiel.de']],
+            ['type' => 'footnote', 'attrs' => ['text' => '', 'url' => '/relativ']],
+        ]]];
+
+        $this->assertSame([], Footnotes::sources($doc));
+        $this->assertTrue(Footnotes::isEmpty('', 'mailto:a@b.de'));
+
+        foreach ($this->footnotesOf(Footnotes::number($doc)) as $footnote) {
+            $this->assertArrayNotHasKey('number', $footnote['attrs'], $footnote['attrs']['url']);
+        }
+    }
+
+    public function test_text_with_a_url_that_is_not_http_stays_plain_text(): void
+    {
+        $sources = Footnotes::sources([['type' => 'paragraph', 'content' => [
+            ['type' => 'footnote', 'attrs' => ['text' => 'Jones', 'url' => 'doi:10.1/x']],
+        ]]]);
+
+        $this->assertSame([['number' => 1, 'text' => 'Jones', 'url' => null]], $sources);
+        $this->assertFalse(Footnotes::isEmpty('Jones', 'doi:10.1/x'));
+    }
+
+    public function test_an_http_url_without_text_stays_a_source(): void
+    {
+        $sources = Footnotes::sources([['type' => 'paragraph', 'content' => [
+            ['type' => 'footnote', 'attrs' => ['text' => '', 'url' => 'https://example.com/a']],
+        ]]]);
+
+        $this->assertSame([['number' => 1, 'text' => '', 'url' => 'https://example.com/a']], $sources);
+        $this->assertFalse(Footnotes::isEmpty('', 'https://example.com/a'));
+    }
+
     public function test_sources_accepts_a_bard_value_and_a_collection(): void
     {
         $value = new Value($this->doc(), 'content', new Bard);
