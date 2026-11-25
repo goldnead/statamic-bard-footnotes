@@ -8,7 +8,7 @@ All notable changes to `statamic-bard-footnotes` will be documented in this file
 
 - A footnote with a URL that is not http(s) and no text is no source any more: it gets no number,
   no superscript and no list entry. Before, the number and superscript were rendered and the list
-  got an empty item. A footnote with text and such a URL stays plain text.
+  got an empty item. A footnote with text and such a URL stays plain text, and is now keyed by its text (it used to be keyed by the URL, so two texts with the same `doi:` URL merged and numbers could shift). The editor's `sourceKey()` (`resources/js/footnotes.js`) follows the same rule, the shared fixture `tests/fixtures/keys.json` covers it; **`dist/` has to be rebuilt before the next release**.
 
 ## 2.1.1 - 2026-10-18
 

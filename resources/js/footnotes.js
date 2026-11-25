@@ -19,14 +19,16 @@ const trimSpace = (value) => value.replace(EDGE_SPACES, '');
 
 /**
  * The key that decides whether two footnote nodes are the same source:
- * the trimmed URL when one exists, otherwise the text with whitespace
- * trimmed at the edges and collapsed inside, case-insensitive. An empty
- * key means the footnote has no source at all: it is not numbered.
+ * the trimmed URL when it is a link (http or https, as in PHP's
+ * Footnotes::link()), otherwise the text with whitespace trimmed at the
+ * edges and collapsed inside, case-insensitive. An empty key means the
+ * footnote has no source at all: it is not numbered. A URL that is no link
+ * (mailto:, doi:, a relative path) does not make a source by itself.
  */
 export function sourceKey({ text = '', url = null } = {}) {
     const link = trimSpace(String(url ?? ''));
 
-    if (link !== '') {
+    if (link !== '' && /^https?:\/\//i.test(link)) {
         return link;
     }
 

@@ -19,6 +19,15 @@
     ],
     "numbering": [
         {
+            "name": "an invalid url does not make a source, and does not merge two texts",
+            "nodes": [
+                { "text": "A", "url": "doi:x" },
+                { "text": "", "url": "mailto:a@b.de" },
+                { "text": "B", "url": "doi:x" }
+            ],
+            "numbers": [1, null, 2]
+        },
+        {
             "name": "a footnote with neither text nor url does not count",
             "nodes": [
                 { "text": "A", "url": null },
