@@ -2,6 +2,14 @@
 
 All notable changes to `statamic-bard-footnotes` will be documented in this file.
 
+## Unreleased
+
+### Fixes
+
+- A footnote with a URL that is not http(s) and no text is no source any more: it gets no number,
+  no superscript and no list entry. Before, the number and superscript were rendered and the list
+  got an empty item. A footnote with text and such a URL stays plain text.
+
 ## 2.1.1 - 2026-10-18
 
 ### Multi-line source field

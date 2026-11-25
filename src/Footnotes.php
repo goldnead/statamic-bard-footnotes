@@ -27,21 +27,33 @@ final class Footnotes
 
     /**
      * The key that decides whether two footnote nodes are the same source:
-     * the trimmed URL when one exists, otherwise the text with whitespace
-     * trimmed at the edges and collapsed inside, case-insensitive. An empty
-     * key means the footnote has no source at all (see isEmpty()).
+     * the link when the URL is one (see link()), otherwise the text with
+     * whitespace trimmed at the edges and collapsed inside, case-insensitive.
+     * An empty key means the footnote has no source at all (see isEmpty()).
      */
     public static function key(?string $text, ?string $url): string
     {
-        $url = self::trimSpace((string) $url);
+        $link = self::link($url);
 
-        if ($url !== '') {
-            return $url;
+        if ($link !== null) {
+            return $link;
         }
 
         $text = preg_replace('/'.self::SPACE.'+/u', ' ', (string) $text);
 
         return mb_strtolower(self::trimSpace($text ?? ''));
+    }
+
+    /**
+     * The URL a footnote links to, trimmed, or null. Nothing from a content
+     * field reaches an href unvetted: a link only survives as http(s), any
+     * other URL is no link (and, without text, no source).
+     */
+    private static function link(?string $url): ?string
+    {
+        $url = self::trimSpace((string) $url);
+
+        return $url !== '' && preg_match('#^https?://#i', $url) === 1 ? $url : null;
     }
 
     /**
@@ -85,14 +97,11 @@ final class Footnotes
             }
 
             $keys[$key] = true;
-            $url = self::trimSpace((string) ($attrs['url'] ?? ''));
 
             $sources[] = [
                 'number' => count($sources) + 1,
                 'text' => self::trimSpace((string) ($attrs['text'] ?? '')),
-                // Nothing from a content field reaches an href unvetted: a
-                // link only survives as http(s), anything else is text.
-                'url' => $url !== '' && preg_match('#^https?://#i', $url) === 1 ? $url : null,
+                'url' => self::link($attrs['url'] ?? null),
             ];
         });
 
